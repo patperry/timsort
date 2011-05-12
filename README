@@ -1,0 +1,7 @@
+This is a fairly straightforward port of the Java/Android
+implementation of TimSort, which itself is a port of
+Tim Peter's list sort for Python.  Most of the comments are
+from the Android implementation, except those annotated
+by the initials "POP".
+
+
