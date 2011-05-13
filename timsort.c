@@ -106,6 +106,7 @@ struct timsort {
 	size_t stackSize;	// Number of pending runs on stack
 	void **runBase;
 	size_t *runLen;
+	size_t stackLen; // maximum stack size
 };
 
 static void binarySort(void *a, size_t hi, size_t start,
@@ -144,8 +145,6 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 			int (*c) (const void *, const void *, void *),
 			void *udata, size_t width)
 {
-	int stackLen;
-
 	assert(ts);
 	assert(a || !len);
 	assert(c);
@@ -181,53 +180,64 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 * sequence, and each run length is greater than the previous two.
 	 * Thus, lower bounds on the minimum runLen numbers on the stack are:
 	 *
-	 *   [     1
-	 *   ,     minRun
-	 *   , 1 * minRun + 1 = f[2] * (minRun + 1)  # (also, minRun + 2)
-	 *   , 2 * minRun + 2 = f[3] * (minRun + 1)
-	 *   , 3 * minRun + 3 = f[4] * (minRun + 1)
-	 *   , 5 * minRun + 5 = f[5] * (minRun + 1)
+	 *   [      1           = b[1]
+	 *   ,      minRun      = b[2]
+	 *   ,  1 * minRun +  2 = b[3]
+	 *   ,  2 * minRun +  3 = b[4]
+	 *   ,  3 * minRun +  6 = b[5]
 	 *   , ...
 	 *   ],
 	 *
-	 * where f[i] are the Fibonacci numbers: 1, 1, 2, 3, 5, 8, ....
-	 *
-	 * Moreover, minRun >= MIN_MERGE / 2.  Also, not that the sum of the
+	 * Moreover, minRun >= MIN_MERGE / 2.  Also, note that the sum of the
 	 * run lenghts is less than or equal to the length of the array.
 	 *
-	 * An array with at most (f[1])        * (minRun + 1) elements can
-	 * have stack len at most 2;
-	 *  "    "     "  "   "   (f[1] + f[2]) * (minRun + 1)     "     " 
-	 *  "    "     "  "   "   3;
-	 *  "    "     "  "   "   (f[1] + f[2] + f[3]) * (minRun + 1)     "
-	 *  "    "     "  "   "   4.
-	 * ...
+	 * Let s be the stack length and n be the array length.  If s >= 2, then n >= b[1] + b[2].
+	 * More generally, if s >= m, then n >= b[1] + b[2] + ... + b[m] = B[m].  Conversely, if
+	 * n < B[m], then s < m.
 	 *
-	 * Let F[n] = f[1] + ... + f[n].  A stack of length n can accomoduate
-	 * arrays of length (MIN_MERGE / 2 + 1) * F[n - 1].
+	 * In Haskell, we can compute the bin sizes using the fibonacci numbers
 	 *
-	 * The value for 'stackLen', below, is determined by the following
-	 * table:
+	 *     fibs = 1:1:(zipWith (+) fibs (tail fibs))
 	 *
-	 *     n    F[n-1]   ((MIN_MERGE / 2  + 1) * F[n-1])
-	 *   ------------------------------------------------
-	 *     5                     7                    119
-	 *    10                    88                   1496
-	 *    19                  6764                 114988
-	 *    40             165580140             2814862380
-	 *    87   1100087778366101930   18701492232223732810    # > 2^64 - 1
+	 *     cumSums a = case a of { [] -> [] ; (x:xs) -> x:(map (x+) (cumSums xs)) }
 	 *
-	 * Note that this is slightly more conservative than in the Java
+	 *     fibSums = cumSums fibs
+	 *
+	 *     binSizes minRun = ([ 1, minRun, minRun + 2 ]
+	 *                        ++ [ (1 + minRun) * (fibs !! (i+2))
+	 *                             + fibSums !! (i+1) - fibs !! i | i <- [0..] ])
+	 *
+	 *     arraySizes minRun = cumSums (binSizes minRun)
+	 *
+	 * We these funcitons, we can compute a table with minRun = MIN_MERGE / 2 = 16:
+	 *
+	 *     m          B[m]
+	 *   ---------------------------
+	 *      1                    17
+	 *      2                    35
+	 *      3                    70
+	 *      4                   124
+	 *      5                   214
+	 *      6                   359
+	 *     11                  4220
+	 *     17                 76210 # > 2^16 - 1
+	 *     40            4885703256 # > 2^32 - 1
+	 *     86  20061275507500957239 # > 2^64 - 1
+	 *
+	 * If len < B[m], then stackLen < m:
+	 */
+	ts->stackLen = (len < 359 ? 5
+			: len < 4220 ? 10
+			: len < 76210 ? 16 : len < 4885703256 ? 39 : 85);
+
+	/* Note that this is slightly more liberal than in the Java
 	 * implementation.  The discrepancy might be because the Java
-	 * implementation uses a more accurate lower bound.
+	 * implementation uses a less accurate lower bound.
 	 */
 	//stackLen = (len < 120 ? 5 : len < 1542 ? 10 : len < 119151 ? 19 : 40);
-	stackLen = (len <= 119 ? 5
-		    : len <= 1496 ? 10
-		    : len <= 114988 ? 19 : len <= 2814862380 ? 40 : 87);
 
-	ts->runBase = malloc(stackLen * sizeof(ts->runBase[0]));
-	ts->runLen = malloc(stackLen * sizeof(ts->runLen[0]));
+	ts->runBase = malloc(ts->stackLen * sizeof(ts->runBase[0]));
+	ts->runLen = malloc(ts->stackLen * sizeof(ts->runLen[0]));
 
 	if (ts->tmp && ts->runBase && ts->runLen) {
 		return SUCCESS;
@@ -343,7 +353,7 @@ static void binarySort(void *a, size_t hi, size_t start,
 		// Set left (and right) to the index where a[start] (pivot) belongs
 		char *left = a;
 		size_t right = start;
-		assert(left <= right);
+
 		/*
 		 * Invariants:
 		 *   pivot >= all in [0, left).
@@ -492,6 +502,8 @@ static size_t minRunLength(size_t n)
  */
 static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
+	assert(ts->stackSize < ts->stackLen);
+
 	ts->runBase[ts->stackSize] = runBase;
 	ts->runLen[ts->stackSize] = runLen;
 	ts->stackSize++;

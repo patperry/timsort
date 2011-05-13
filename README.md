@@ -112,9 +112,9 @@ The rest of the changes allow for `size_t` to be up to 64-bits long:
 
     gets replaced with with
 
-        stackLen = (len <= 119 ? 5
-		            : len <= 1496 ? 10
-        		    : len <= 114988 ? 19 : len <= 2814862380 ? 40 : 87);
+	    stackLen = (len < 359 ? 5
+			        : len < 4220 ? 10
+			        : len < 76210 ? 16 : len < 4885703256 ? 39 : 85);
 
     Note that the bounds on `len` are slightly different.  The
     justification for these values is given in a comment above the assignment.
