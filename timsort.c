@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 #include <assert.h>		// assert
 #include <errno.h>		// EINVAL
 #include <stddef.h>		// size_t, NULL
@@ -263,7 +262,7 @@ int timsort(void *a, size_t nel, size_t width,
 	// If array is small, do a "mini-TimSort" with no merges
 	if (nel < MIN_MERGE) {
 		size_t initRunLen =
-			countRunAndMakeAscending(a, nel, c, udata, width);
+		    countRunAndMakeAscending(a, nel, c, udata, width);
 		binarySort(a, nel, initRunLen, c, udata, width);
 		return err;
 	}
@@ -281,14 +280,12 @@ int timsort(void *a, size_t nel, size_t width,
 	do {
 		// Identify next run
 		size_t runLen =
-			countRunAndMakeAscending(a, nel, c, udata, width);
+		    countRunAndMakeAscending(a, nel, c, udata, width);
 
 		// If run is short, extend to min(minRun, nRemaining)
 		if (runLen < minRun) {
-			size_t force =
-			    nel <= minRun ? nel : minRun;
-			binarySort(a, force, runLen, c, udata,
-				   width);
+			size_t force = nel <= minRun ? nel : minRun;
+			binarySort(a, force, runLen, c, udata, width);
 			runLen = force;
 		}
 		// Push run onto pending-run stack, and maybe merge
@@ -595,9 +592,8 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * Find where the first element of run2 goes in run1. Prior elements
 	 * in run1 can be ignored (because they're already in place).
 	 */
-	size_t k =
-		gallopRight(base2, base1, len1, 0, ts->c, ts->udata,
-			width);
+	size_t k = gallopRight(base2, base1, len1, 0, ts->c, ts->udata,
+			       width);
 	assert(k >= 0);
 	base1 += k * width;
 	len1 -= k;
@@ -609,7 +605,7 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * in run2 can be ignored (because they're already in place).
 	 */
 	len2 =
-		gallopLeft(ELEM(base1, len1 - 1), base2, len2, len2 - 1,
+	    gallopLeft(ELEM(base1, len1 - 1), base2, len2, len2 - 1,
 		       ts->c, ts->udata, width);
 	assert(len2 >= 0);
 	if (len2 == 0)
@@ -655,9 +651,9 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		size_t maxOfs = len - hint;
 		//while (ofs < maxOfs && c.compare(key, a[base + hint + ofs]) > 0) {
 		while (ofs < maxOfs
-			&& compare(key, ELEM(hintp, ofs), udata) > 0) {
+		       && compare(key, ELEM(hintp, ofs), udata) > 0) {
 			lastOfs = ofs;
-			ofs = (ofs << 1) + 1;  // eventually this becomes SIZE_MAX
+			ofs = (ofs << 1) + 1;	// eventually this becomes SIZE_MAX
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -670,10 +666,9 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		const size_t maxOfs = hint + 1;
 		//while (ofs < maxOfs && c.compare(key, a[base + hint - ofs]) <= 0) {
 		while (ofs < maxOfs
-		       && compare(key, ELEM(hintp, -ofs),
-				  udata) <= 0) {
+		       && compare(key, ELEM(hintp, -ofs), udata) <= 0) {
 			lastOfs = ofs;
-			ofs = (ofs << 1) + 1; // no need to check for overflow
+			ofs = (ofs << 1) + 1;	// no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -732,9 +727,9 @@ static size_t gallopRight(void *key, void *base, size_t len,
 		// Gallop left until a[b+hint - ofs] <= key < a[b+hint - lastOfs]
 		size_t maxOfs = hint + 1;
 		while (ofs < maxOfs
-			&& compare(key, ELEM(hintp,  -ofs), udata) < 0) {
+		       && compare(key, ELEM(hintp, -ofs), udata) < 0) {
 			lastOfs = ofs;
-			ofs = (ofs << 1) + 1; // no need to check for overflow
+			ofs = (ofs << 1) + 1;	// no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -747,10 +742,9 @@ static size_t gallopRight(void *key, void *base, size_t len,
 		// Gallop right until a[b+hint + lastOfs] <= key < a[b+hint + ofs]
 		size_t maxOfs = len - hint;
 		while (ofs < maxOfs
-			&& compare(key, ELEM(hintp, ofs),
-				  udata) >= 0) {
+		       && compare(key, ELEM(hintp, ofs), udata) >= 0) {
 			lastOfs = ofs;
-			ofs = (ofs << 1) + 1; // no need to check for overflow
+			ofs = (ofs << 1) + 1;	// no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -795,7 +789,8 @@ static size_t gallopRight(void *key, void *base, size_t len,
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
-static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, size_t len2)
+static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2,
+		   size_t len2)
 {
 	size_t width = ts->width;
 
@@ -868,7 +863,7 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, si
 				if (count1 >= minGallop)
 					break;
 			}
-		} while (1); // (count1 | count2) < minGallop);
+		} while (1);	// (count1 | count2) < minGallop);
 
 		/*
 		 * One run is winning so consistently that galloping may be a
@@ -878,7 +873,7 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, si
 		do {
 			assert(len1 > 1 && len2 > 0);
 			count1 =
-				gallopRight(cursor2, cursor1, len1, 0,
+			    gallopRight(cursor2, cursor1, len1, 0,
 					compare, udata, width);
 			if (count1 != 0) {
 				memcpy(dest, cursor1, count1 * width);
@@ -895,8 +890,8 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, si
 				goto outer;
 
 			count2 =
-				gallopLeft(cursor1, cursor2, len2, 0,
-					compare, udata, width);
+			    gallopLeft(cursor1, cursor2, len2, 0,
+				       compare, udata, width);
 			if (count2 != 0) {
 				memcpy(dest, cursor2, count2 * width);
 				dest += count2 * width;
@@ -951,7 +946,6 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 	size_t width = ts->width;
 
 	assert(len1 > 0 && len2 > 0 && base1 + len1 * width == base2);
-
 
 	// Copy second run into temp array
 	void *tmp = ensureCapacity(ts, len2);
@@ -1026,15 +1020,16 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 		do {
 			assert(len1 > 0 && len2 > 1);
 			count1 =
-				len1 - gallopRight(cursor2, base1,
-						len1, len1 - 1, compare, udata,
+			    len1 - gallopRight(cursor2, base1,
+					       len1, len1 - 1, compare, udata,
 					       width);
 			if (count1 != 0) {
 				dest -= count1 * width;
 				cursor1 -= count1 * width;
 				len1 -= count1;
 				// System.arraycopy(a, cursor1 + 1, a, dest + 1, count1);
-				memcpy(dest + width, cursor1 + width, count1 * width);
+				memcpy(dest + width, cursor1 + width,
+				       count1 * width);
 				if (len1 == 0)
 					goto outer;
 			}
