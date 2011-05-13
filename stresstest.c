@@ -108,6 +108,12 @@ void run_tests(void)
 			exit(EXIT_FAILURE);
 		}
 		verify(dst, size);
+		err = timsort(dst, size, sizeof(dst[0]), compare_udata, NULL);
+		if (err) {
+			perror("timsort failed");
+			exit(EXIT_FAILURE);
+		}
+		verify(dst, size);
 		
 		free(dst);
 	} 
@@ -124,6 +130,12 @@ void run_tests(void)
 		}
 
 		fill(dst, size);
+		err = mergesort(dst, size, sizeof(dst[0]), compare);
+		if (err) {
+			perror("mergesort failed");
+			exit(EXIT_FAILURE);
+		}
+		verify(dst, size);
 		err = mergesort(dst, size, sizeof(dst[0]), compare);
 		if (err) {
 			perror("mergesort failed");
