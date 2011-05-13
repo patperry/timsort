@@ -156,8 +156,8 @@ The rest of the changes allow for `size_t` to be up to 64-bits long:
             newSize |= newSize >> 32;
 
 
-Guard agains overflow in midpoint computation
----------------------------------------------
+Guard against overflow in midpoint computation
+----------------------------------------------
 
 The Java implentation of `binarySort` computes the midpoint of `left` and
 `right` in an unsafe manner.  To fix this, I replaced
