@@ -30,8 +30,8 @@ copyright on the code.  An even bigger "thank you" goes to Tim Peters,
 for devising and documenting the algorithm in the first place.
 
 
-Differences between the Java version
-====================================
+Differences from the Java version
+=================================
 
 C doesn't have exceptions, so I use `errno` and return codes instead.
 I switched from 'int' to 'size_t' as the index type.  This required
