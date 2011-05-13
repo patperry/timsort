@@ -855,6 +855,8 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, si
 				count1 = 0;
 				if (--len2 == 0)
 					goto outer;
+				if (count2 >= minGallop)
+					break;
 			} else {
 				memcpy(dest, cursor1, width);
 				dest += width;
@@ -863,8 +865,10 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, si
 				count2 = 0;
 				if (--len1 == 1)
 					goto outer;
+				if (count1 >= minGallop)
+					break;
 			}
-		} while ((count1 | count2) < minGallop);
+		} while (1); // (count1 | count2) < minGallop);
 
 		/*
 		 * One run is winning so consistently that galloping may be a
