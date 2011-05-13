@@ -35,7 +35,7 @@
 /* Used to control the stress test */
 #define SEED 123
 #define MAXSIZE 25600
-#define TESTS 1000
+#define TESTS 10000
 #define TYPE char
 
 /* helper functions */
@@ -65,6 +65,13 @@ static void fill(TYPE *dst, const size_t size)
 }
 
 /* used for stdlib */
+static inline int compare(const void *a, const void *b)
+{
+  const TYPE da = *((const TYPE *) a);
+  const TYPE db = *((const TYPE *) b);
+  return (da < db) ? -1 : (da == db) ? 0 : 1;
+}
+
 static inline int compare_udata(const void *a, const void *b, void *udata)
 {
   const TYPE da = *((const TYPE *) a);
@@ -72,10 +79,6 @@ static inline int compare_udata(const void *a, const void *b, void *udata)
   return (da < db) ? -1 : (da == db) ? 0 : 1;
 }
 
-static inline int compare(const void *a, const void *b)
-{
-	return compare_udata(a, b, NULL);
-}
 
 void run_tests(void)
 {
@@ -107,6 +110,24 @@ void run_tests(void)
 		
 		free(dst);
 	} 
+#if 0
+	printf("qsort\n");
+	for (test = 0; test < TESTS; test++)
+	{
+		size = (lrand48() % (MAXSIZE + 1));
+		dst = malloc(size * sizeof(dst[0]));
+		if (!dst && size) {
+			perror("malloc failed");
+			exit(EXIT_FAILURE);
+		}
+
+		fill(dst, size);
+		qsort(dst, size, sizeof(dst[0]), compare);
+		verify(dst, size);
+		
+		free(dst);
+	} 
+#endif
 }
 
 int main(void)
