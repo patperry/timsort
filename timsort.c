@@ -701,7 +701,8 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 	 */
 	// lastOfs++; POP: we added 1 above to keep lastOfs non-negative
 	while (lastOfs < ofs) {
-		size_t m = lastOfs + ((ofs - lastOfs) >> 1);
+		//size_t m = lastOfs + ((ofs - lastOfs) >> 1);
+		size_t m = (lastOfs & ofs) + ((lastOfs ^ ofs) >> 1);
 
 		// if (c.compare(key, a[base + m]) > 0)
 		if (compare(key, ELEM(base, m), udata) > 0)
@@ -782,7 +783,8 @@ static size_t gallopRight(void *key, void *base, size_t len,
 	 * search, with invariant a[b + lastOfs - 1] <= key < a[b + ofs].
 	 */
 	while (lastOfs < ofs) {
-		size_t m = lastOfs + ((ofs - lastOfs) >> 1);
+		// size_t m = lastOfs + ((ofs - lastOfs) >> 1);
+		size_t m = (lastOfs & ofs) + ((lastOfs ^ ofs) >> 1);
 
 		if (compare(key, ELEM(base, m), udata) < 0)
 			ofs = m;	// key < a[b + m]
