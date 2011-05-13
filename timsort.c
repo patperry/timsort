@@ -973,27 +973,29 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		return FAILURE;
 
 	// System.arraycopy(a, base2, tmp, 0, len2);
-	memcpy(ELEM(tmp, 0), ELEM(a, base2), len2 * width);
+	memcpy(tmp, ELEM(a, base2), len2 * width);
 
-	size_t cursor1 = base1 + len1 - 1;	// Indexes into a
-	size_t cursor2 = len2 - 1;	// Indexes into tmp array
-	size_t dest = base2 + len2 - 1;	// Indexes into a
+	char *cursor1 = ELEM(a, base1 + len1 - 1);	// Indexes into a
+	char *cursor2 = ELEM(tmp, len2 - 1);	// Indexes into tmp array
+	char *dest = ELEM(a, base2 + len2 - 1);	// Indexes into a
 
 	// Move last element of first run and deal with degenerate cases
 	// a[dest--] = a[cursor1--];
-	memcpy(ELEM(a, dest--), ELEM(a, cursor1--), width);
+	memcpy(dest, cursor1, width);
+	dest -= width;
+	cursor1 -= width;
 	if (--len1 == 0) {
 		// System.arraycopy(tmp, 0, a, dest - (len2 - 1), len2);
-		memcpy(ELEM(a, dest - (len2 - 1)), ELEM(tmp, 0), len2 * width);
+		memcpy(dest - (len2 - 1) * width, tmp, len2 * width);
 		return SUCCESS;
 	}
 	if (len2 == 1) {
-		dest -= len1;
-		cursor1 -= len1;
+		dest -= len1 * width;
+		cursor1 -= len1 * width;
 		// System.arraycopy(a, cursor1 + 1, a, dest + 1, len1);
-		memcpy(ELEM(a, dest + 1), ELEM(a, cursor1 + 1), len1 * width);
+		memcpy(dest + width, cursor1 + width, len1 * width);
 		// a[dest] = tmp[cursor2];
-		memcpy(ELEM(a, dest), ELEM(tmp, cursor2), width);
+		memcpy(dest, cursor2, width);
 		return SUCCESS;
 	}
 
@@ -1011,17 +1013,18 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		 */
 		do {
 			assert(len1 > 0 && len2 > 1);
-			if (compare(ELEM(tmp, cursor2), ELEM(a, cursor1), udata)
-			    < 0) {
-				memcpy(ELEM(a, dest--), ELEM(a, cursor1--),
-				       width);
+			if (compare(cursor2, cursor1, udata) < 0) {
+				memcpy(dest, cursor1, width);
+				dest -= width;
+				cursor1 -= width;
 				count1++;
 				count2 = 0;
 				if (--len1 == 0)
 					goto outer;
 			} else {
-				memcpy(ELEM(a, dest--), ELEM(tmp, cursor2--),
-				       width);
+				memcpy(dest, cursor2, width);
+				dest -= width;
+				cursor2 -= width;
 				count2++;
 				count1 = 0;
 				if (--len2 == 1)
@@ -1037,37 +1040,40 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		do {
 			assert(len1 > 0 && len2 > 1);
 			count1 =
-			    len1 - gallopRight(ELEM(tmp, cursor2), a, base1,
+			    len1 - gallopRight(cursor2, a, base1,
 					       len1, len1 - 1, compare, udata,
 					       width);
 			if (count1 != 0) {
-				dest -= count1;
-				cursor1 -= count1;
+				dest -= count1 * width;
+				cursor1 -= count1 * width;
 				len1 -= count1;
 				// System.arraycopy(a, cursor1 + 1, a, dest + 1, count1);
-				memcpy(ELEM(a, dest + 1), ELEM(a, cursor1 + 1),
-				       count1 * width);
+				memcpy(dest + width, cursor1 + width, count1 * width);
 				if (len1 == 0)
 					goto outer;
 			}
-			memcpy(ELEM(a, dest--), ELEM(tmp, cursor2--), width);
+			memcpy(dest, cursor2, width);
+			dest -= width;
+			cursor2 -= width;
 			if (--len2 == 1)
 				goto outer;
 
 			count2 =
-			    len2 - gallopLeft(ELEM(a, cursor1), tmp, 0, len2,
+			    len2 - gallopLeft(cursor1, tmp, 0, len2,
 					      len2 - 1, compare, udata, width);
 			if (count2 != 0) {
-				dest -= count2;
-				cursor2 -= count2;
+				dest -= count2 * width;
+				cursor2 -= count2 * width;
 				len2 -= count2;
 				// System.arraycopy(tmp, cursor2 + 1, a, dest + 1, count2);
-				memcpy(ELEM(a, dest + 1),
-				       ELEM(tmp, cursor2 + 1), count2 * width);
+				memcpy(dest + width,
+				       cursor2 + width, count2 * width);
 				if (len2 <= 1)	// len2 == 1 || len2 == 0
 					goto outer;
 			}
-			memcpy(ELEM(a, dest--), ELEM(a, cursor1--), width);
+			memcpy(dest, cursor1, width);
+			dest -= width;
+			cursor1 -= width;
 			if (--len1 == 0)
 				goto outer;
 			if (minGallop > 0)
@@ -1080,12 +1086,12 @@ outer:
 
 	if (len2 == 1) {
 		assert(len1 > 0);
-		dest -= len1;
-		cursor1 -= len1;
+		dest -= len1 * width;
+		cursor1 -= len1 * width;
 		// System.arraycopy(a, cursor1 + 1, a, dest + 1, len1);
-		memcpy(ELEM(a, dest + 1), ELEM(a, cursor1 + 1), len1 * width);
+		memcpy(dest + width, cursor1 + width, len1 * width);
 		// a[dest] = tmp[cursor2];  // Move first elt of run2 to front of merge
-		memcpy(ELEM(a, dest), ELEM(tmp, cursor2), width);
+		memcpy(dest, cursor2, width);
 	} else if (len2 == 0) {
 		errno = EINVAL;	// Comparison method violates its general contract
 		return FAILURE;
@@ -1093,7 +1099,7 @@ outer:
 		assert(len1 == 0);
 		assert(len2 > 0);
 		//System.arraycopy(tmp, 0, a, dest - (len2 - 1), len2);
-		memcpy(ELEM(a, dest - (len2 - 1)), ELEM(tmp, 0), len2 * width);
+		memcpy(dest - (len2 - 1) * width, tmp, len2 * width);
 	}
 
 	return SUCCESS;
