@@ -120,10 +120,10 @@ static void pushRun(struct timsort *ts, size_t runBase, size_t runLen);
 static int mergeCollapse(struct timsort *ts);
 static int mergeForceCollapse(struct timsort *ts);
 static int mergeAt(struct timsort *ts, size_t i);
-static size_t gallopLeft(void *key, void *a, size_t base, size_t len,
+static size_t gallopLeft(void *key, void *base, size_t len,
 			 size_t hint, comparator compare, void *udata,
 			 size_t width);
-static size_t gallopRight(void *key, void *a, size_t base, size_t len,
+static size_t gallopRight(void *key, void *base, size_t len,
 			  size_t hint, comparator compare, void *udata,
 			  size_t width);
 static int mergeLo(struct timsort *ts, size_t base1, size_t len1, size_t base2,
@@ -601,7 +601,7 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * in run1 can be ignored (because they're already in place).
 	 */
 	size_t k =
-	    gallopRight(ELEM(a, base2), a, base1, len1, 0, ts->c, ts->udata,
+		gallopRight(ELEM(a, base2), ELEM(a, base1), len1, 0, ts->c, ts->udata,
 			width);
 	assert(k >= 0);
 	base1 += k;
@@ -614,7 +614,7 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * in run2 can be ignored (because they're already in place).
 	 */
 	len2 =
-	    gallopLeft(ELEM(a, base1 + len1 - 1), a, base2, len2, len2 - 1,
+		gallopLeft(ELEM(a, base1 + len1 - 1), ELEM(a, base2), len2, len2 - 1,
 		       ts->c, ts->udata, width);
 	assert(len2 >= 0);
 	if (len2 == 0)
@@ -645,21 +645,22 @@ static int mergeAt(struct timsort *ts, size_t i)
  *    the first k elements of a should precede key, and the last n - k
  *    should follow it.
  */
-static size_t gallopLeft(void *key, void *a, size_t base, size_t len,
+static size_t gallopLeft(void *key, void *base, size_t len,
 			 size_t hint, comparator compare, void *udata,
 			 size_t width)
 {
 
 	assert(len > 0 && hint >= 0 && hint < len);
+	char *hintp = ELEM(base, hint);
 	size_t lastOfs = 0;
 	size_t ofs = 1;
 	// if (compare(key, a[base + hint]) > 0) {
-	if (compare(key, ELEM(a, base + hint), udata) > 0) {
+	if (compare(key, hintp, udata) > 0) {
 		// Gallop right until a[base+hint+lastOfs] < key <= a[base+hint+ofs]
 		size_t maxOfs = len - hint;
 		//while (ofs < maxOfs && c.compare(key, a[base + hint + ofs]) > 0) {
 		while (ofs < maxOfs
-		       && compare(key, ELEM(a, base + hint + ofs), udata) > 0) {
+			&& compare(key, ELEM(hintp, ofs), udata) > 0) {
 			lastOfs = ofs;
 			if ((ofs << 1) + 1 > ofs) {
 				ofs = (ofs << 1) + 1;
@@ -678,7 +679,7 @@ static size_t gallopLeft(void *key, void *a, size_t base, size_t len,
 		const size_t maxOfs = hint + 1;
 		//while (ofs < maxOfs && c.compare(key, a[base + hint - ofs]) <= 0) {
 		while (ofs < maxOfs
-		       && compare(key, ELEM(a, base + hint - ofs),
+		       && compare(key, ELEM(hintp, -ofs),
 				  udata) <= 0) {
 			lastOfs = ofs;
 			if ((ofs << 1) + 1 > ofs) {
@@ -708,7 +709,7 @@ static size_t gallopLeft(void *key, void *a, size_t base, size_t len,
 		size_t m = lastOfs + ((ofs - lastOfs) >> 1);
 
 		// if (c.compare(key, a[base + m]) > 0)
-		if (compare(key, ELEM(a, base + m), udata) > 0)
+		if (compare(key, ELEM(base, m), udata) > 0)
 			lastOfs = m + 1;	// a[base + m] < key
 		else
 			ofs = m;	// key <= a[base + m]
@@ -730,19 +731,20 @@ static size_t gallopLeft(void *key, void *a, size_t base, size_t len,
  * @param c the comparator used to order the range, and to search
  * @return the int k,  0 <= k <= n such that a[b + k - 1] <= key < a[b + k]
  */
-static size_t gallopRight(void *key, void *a, size_t base, size_t len,
+static size_t gallopRight(void *key, void *base, size_t len,
 			  size_t hint, comparator compare, void *udata,
 			  size_t width)
 {
 	assert(len > 0 && hint >= 0 && hint < len);
 
+	char *hintp = ELEM(base, hint);
 	size_t ofs = 1;
 	size_t lastOfs = 0;
-	if (compare(key, ELEM(a, base + hint), udata) < 0) {
+	if (compare(key, hintp, udata) < 0) {
 		// Gallop left until a[b+hint - ofs] <= key < a[b+hint - lastOfs]
 		size_t maxOfs = hint + 1;
 		while (ofs < maxOfs
-		       && compare(key, ELEM(a, base + hint - ofs), udata) < 0) {
+			&& compare(key, ELEM(hintp,  -ofs), udata) < 0) {
 			lastOfs = ofs;
 			if ((ofs << 1) + 1 > ofs) {
 				ofs = (ofs << 1) + 1;
@@ -761,7 +763,7 @@ static size_t gallopRight(void *key, void *a, size_t base, size_t len,
 		// Gallop right until a[b+hint + lastOfs] <= key < a[b+hint + ofs]
 		size_t maxOfs = len - hint;
 		while (ofs < maxOfs
-		       && compare(key, ELEM(a, base + hint + ofs),
+			&& compare(key, ELEM(hintp, ofs),
 				  udata) >= 0) {
 			lastOfs = ofs;
 			if ((ofs << 1) + 1 > ofs) {
@@ -787,7 +789,7 @@ static size_t gallopRight(void *key, void *a, size_t base, size_t len,
 	while (lastOfs < ofs) {
 		size_t m = lastOfs + ((ofs - lastOfs) >> 1);
 
-		if (compare(key, ELEM(a, base + m), udata) < 0)
+		if (compare(key, ELEM(base, m), udata) < 0)
 			ofs = m;	// key < a[b + m]
 		else
 			lastOfs = m + 1;	// a[b + m] <= key
@@ -892,7 +894,7 @@ static int mergeLo(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		do {
 			assert(len1 > 1 && len2 > 0);
 			count1 =
-				gallopRight(cursor2, tmp, (cursor1 - (char *)tmp) / width, len1, 0,
+				gallopRight(cursor2, cursor1, len1, 0,
 					compare, udata, width);
 			if (count1 != 0) {
 				memcpy(dest, cursor1, count1 * width);
@@ -909,7 +911,7 @@ static int mergeLo(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 				goto outer;
 
 			count2 =
-				gallopLeft(cursor1, a, (cursor2 -  (char *)a) / width, len2, 0,
+				gallopLeft(cursor1, cursor2, len2, 0,
 					compare, udata, width);
 			if (count2 != 0) {
 				memcpy(dest, cursor2, count2 * width);
@@ -1040,7 +1042,7 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		do {
 			assert(len1 > 0 && len2 > 1);
 			count1 =
-			    len1 - gallopRight(cursor2, a, base1,
+				len1 - gallopRight(cursor2, ELEM(a, base1),
 					       len1, len1 - 1, compare, udata,
 					       width);
 			if (count1 != 0) {
@@ -1059,7 +1061,7 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 				goto outer;
 
 			count2 =
-			    len2 - gallopLeft(cursor1, tmp, 0, len2,
+			    len2 - gallopLeft(cursor1, tmp, len2,
 					      len2 - 1, compare, udata, width);
 			if (count2 != 0) {
 				dest -= count2 * width;
