@@ -113,7 +113,7 @@ static void binarySort(void *a, size_t hi, size_t start,
 static size_t countRunAndMakeAscending(void *a, size_t hi,
 				       comparator compare, void *udata,
 				       size_t width);
-static void reverseRange(void *a, size_t lo, size_t hi, size_t width);
+static void reverseRange(void *a, size_t hi, size_t width);
 static size_t minRunLength(size_t n);
 static void pushRun(struct timsort *ts, void *runBase, size_t runLen);
 static int mergeCollapse(struct timsort *ts);
@@ -420,7 +420,7 @@ static size_t countRunAndMakeAscending(void *a, size_t hi,
 			cur = next;
 			next += width;
 		}
-		reverseRange(a, 0, runHi, width);
+		reverseRange(a, runHi, width);
 	} else {		// Ascending
 		while (runHi < hi && compare(next, cur, udata) >= 0) {
 			runHi++;
@@ -436,19 +436,23 @@ static size_t countRunAndMakeAscending(void *a, size_t hi,
  * Reverse the specified range of the specified array.
  *
  * @param a the array in which a range is to be reversed
- * @param lo the index of the first element in the range to be reversed
  * @param hi the index after the last element in the range to be reversed
  */
-static void reverseRange(void *a, size_t lo, size_t hi, size_t width)
+static void reverseRange(void *a, size_t hi, size_t width)
 {
+	assert(hi > 0);
+
 	char t[width];
 
-	while (lo + 1 < hi) {
-		memcpy(t, ELEM(a, lo), width);
-		memcpy(ELEM(a, lo), ELEM(a, hi - 1), width);
-		memcpy(ELEM(a, hi - 1), t, width);
-		lo++;
-		hi--;
+	char *front = a;
+	char *back = ELEM(a, hi - 1);
+
+	while (front < back) {
+		memcpy(t, front, width);
+		memcpy(front, back, width);
+		memcpy(back, t, width);
+		front += width;
+		back -= width;
 	}
 }
 
