@@ -410,18 +410,23 @@ static size_t countRunAndMakeAscending(void *a, size_t hi,
 	if (runHi == hi)
 		return 1;
 
+	char *cur = ELEM(a, runHi++);
+	char *next = cur + width;
+
 	// Find end of run, and reverse range if descending
-	if (compare(ELEM(a, runHi++), a, udata) < 0) { // Descending
-		while (runHi < hi
-		       && compare(ELEM(a, runHi), ELEM(a, runHi - 1),
-				  udata) < 0)
+	if (compare(cur, a, udata) < 0) { // Descending
+		while (runHi < hi && compare(next, cur, udata) < 0) {
 			runHi++;
+			cur = next;
+			next += width;
+		}
 		reverseRange(a, 0, runHi, width);
 	} else {		// Ascending
-		while (runHi < hi
-		       && compare(ELEM(a, runHi), ELEM(a, runHi - 1),
-				  udata) >= 0)
+		while (runHi < hi && compare(next, cur, udata) >= 0) {
 			runHi++;
+			cur = next;
+			next += width;
+		}
 	}
 
 	return runHi;
