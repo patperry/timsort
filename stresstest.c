@@ -36,7 +36,7 @@
 #define SEED 123
 #define MAXSIZE 25600
 #define TESTS 10000
-#define TYPE char
+#define TYPE int
 
 /* helper functions */
 void verify(TYPE *dst, const size_t size)
@@ -90,6 +90,7 @@ void run_tests(void)
 	printf("Running tests\n");
 	srand48(SEED);
 
+#if 1
 	printf("timsort\n");
 	for (test = 0; test < TESTS; test++)
 	{
@@ -110,8 +111,9 @@ void run_tests(void)
 		
 		free(dst);
 	} 
+#endif
 #if 0
-	printf("qsort\n");
+	printf("mergesort\n");
 	for (test = 0; test < TESTS; test++)
 	{
 		size = (lrand48() % (MAXSIZE + 1));
@@ -122,7 +124,11 @@ void run_tests(void)
 		}
 
 		fill(dst, size);
-		qsort(dst, size, sizeof(dst[0]), compare);
+		err = mergesort(dst, size, sizeof(dst[0]), compare);
+		if (err) {
+			perror("mergesort failed");
+			exit(EXIT_FAILURE);
+		}
 		verify(dst, size);
 		
 		free(dst);
