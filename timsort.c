@@ -334,11 +334,14 @@ static void binarySort(void *a, size_t hi, size_t start,
 
 	if (start == 0)
 		start++;
-	for (; start < hi; start++) {
-		memcpy(pivot, ELEM(a, start), width);
+
+	char *startp = ELEM(a, start);
+
+	for (; start < hi; start++, startp += width) {
+		memcpy(pivot, startp, width);
 
 		// Set left (and right) to the index where a[start] (pivot) belongs
-		size_t left = 0;
+		char *left = a;
 		size_t right = start;
 		assert(left <= right);
 		/*
@@ -346,16 +349,17 @@ static void binarySort(void *a, size_t hi, size_t start,
 		 *   pivot >= all in [0, left).
 		 *   pivot <  all in [right, start).
 		 */
-		while (left < right) {
-			// size_t mid = left + ((right - left) >> 1);
-			// http://stackoverflow.com/questions/4844165/safe-integer-middle-value-formula
-			size_t mid = (left & right) + ((left ^ right) >> 1);
-			if (compare(pivot, ELEM(a, mid), udata) < 0)
+		while (0 < right) {
+			size_t mid = right >> 1;
+			char *pmid = ELEM(left, mid);
+			if (compare(pivot, pmid, udata) < 0) {
 				right = mid;
-			else
-				left = mid + 1;
+			} else {
+				left = pmid + width;
+				right -= (mid + 1);
+			}
 		}
-		assert(left == right);
+		assert(0 == right);
 
 		/*
 		 * The invariants still hold: pivot >= all in [lo, left) and
@@ -364,21 +368,12 @@ static void binarySort(void *a, size_t hi, size_t start,
 		 * first slot after them -- that's why this sort is stable.
 		 * Slide elements over to make room to make room for pivot.
 		 */
-		size_t n = start - left;	// The number of elements to move
-		// Switch is just an optimization for arraycopy in default case
-		switch (n) {
-		case 2:	// a[left + 2] = a[left + 1];
-			memcpy(ELEM(a, left + 2), ELEM(a, left + 1), width);
+		size_t n = startp - left; // The number of elements to move
+		memmove(left + width, left, n);
 
-			// fallthrough
-		case 1:	// a[left + 1] = a[left];
-			memcpy(ELEM(a, left + 1), ELEM(a, left), width);
-			break;
-		default:	// System.arraycopy(a, left, a, left + 1, n);
-			memmove(ELEM(a, left + 1), ELEM(a, left), n * width);
-		}
+
 		// a[left] = pivot;
-		memcpy(ELEM(a, left), pivot, width);
+		memcpy(left, pivot, width);
 	}
 }
 
@@ -679,6 +674,7 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 	// lastOfs++; POP: we added 1 above to keep lastOfs non-negative
 	while (lastOfs < ofs) {
 		//size_t m = lastOfs + ((ofs - lastOfs) >> 1);
+		// http://stackoverflow.com/questions/4844165/safe-integer-middle-value-formula
 		size_t m = (lastOfs & ofs) + ((lastOfs ^ ofs) >> 1);
 
 		if (compare(key, ELEM(base, m), udata) > 0)
