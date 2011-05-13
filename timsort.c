@@ -109,7 +109,7 @@ struct timsort {
 	size_t *runLen;
 };
 
-static void binarySort(void *a, size_t lo, size_t hi, size_t start,
+static void binarySort(void *a, size_t hi, size_t start,
 		       comparator compare, void *udata, size_t width);
 static size_t countRunAndMakeAscending(void *a, size_t lo, size_t hi,
 				       comparator compare, void *udata,
@@ -267,7 +267,7 @@ int timsort(void *a, size_t nel, size_t width,
 	if (nRemaining < MIN_MERGE) {
 		size_t initRunLen =
 		    countRunAndMakeAscending(a, lo, hi, c, udata, width);
-		binarySort(a, lo, hi, lo + initRunLen, c, udata, width);
+		binarySort(ELEM(a, lo), hi - lo, initRunLen, c, udata, width);
 		return err;
 	}
 
@@ -290,7 +290,7 @@ int timsort(void *a, size_t nel, size_t width,
 		if (runLen < minRun) {
 			size_t force =
 			    nRemaining <= minRun ? nRemaining : minRun;
-			binarySort(a, lo, lo + force, lo + runLen, c, udata,
+			binarySort(ELEM(a, lo), force, runLen, c, udata,
 				   width);
 			runLen = force;
 		}
@@ -333,25 +333,25 @@ out:
  *        not already known to be sorted ({@code lo <= start <= hi})
  * @param c comparator to used for the sort
  */
-static void binarySort(void *a, size_t lo, size_t hi, size_t start,
+static void binarySort(void *a, size_t hi, size_t start,
 		       comparator compare, void *udata, size_t width)
 {
-	assert(lo <= start && start <= hi);
+	assert(0 <= start && start <= hi);
 
 	char pivot[width];
 
-	if (start == lo)
+	if (start == 0)
 		start++;
 	for (; start < hi; start++) {
 		memcpy(pivot, ELEM(a, start), width);
 
 		// Set left (and right) to the index where a[start] (pivot) belongs
-		size_t left = lo;
+		size_t left = 0;
 		size_t right = start;
 		assert(left <= right);
 		/*
 		 * Invariants:
-		 *   pivot >= all in [lo, left).
+		 *   pivot >= all in [0, left).
 		 *   pivot <  all in [right, start).
 		 */
 		while (left < right) {
