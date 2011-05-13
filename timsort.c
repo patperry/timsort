@@ -657,11 +657,7 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		while (ofs < maxOfs
 			&& compare(key, ELEM(hintp, ofs), udata) > 0) {
 			lastOfs = ofs;
-			if ((ofs << 1) + 1 > ofs) {
-				ofs = (ofs << 1) + 1;
-			} else {	// overflow
-				ofs = maxOfs;
-			}
+			ofs = (ofs << 1) + 1;  // eventually this becomes SIZE_MAX
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -677,11 +673,7 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		       && compare(key, ELEM(hintp, -ofs),
 				  udata) <= 0) {
 			lastOfs = ofs;
-			if ((ofs << 1) + 1 > ofs) {
-				ofs = (ofs << 1) + 1;
-			} else {	// overflow
-				ofs = maxOfs;
-			}
+			ofs = (ofs << 1) + 1; // no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -742,11 +734,7 @@ static size_t gallopRight(void *key, void *base, size_t len,
 		while (ofs < maxOfs
 			&& compare(key, ELEM(hintp,  -ofs), udata) < 0) {
 			lastOfs = ofs;
-			if ((ofs << 1) + 1 > ofs) {
-				ofs = (ofs << 1) + 1;
-			} else {	// overflow
-				ofs = maxOfs;
-			}
+			ofs = (ofs << 1) + 1; // no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -762,11 +750,7 @@ static size_t gallopRight(void *key, void *base, size_t len,
 			&& compare(key, ELEM(hintp, ofs),
 				  udata) >= 0) {
 			lastOfs = ofs;
-			if ((ofs << 1) + 1 > ofs) {
-				ofs = (ofs << 1) + 1;
-			} else {	// overflow
-				ofs = maxOfs;
-			}
+			ofs = (ofs << 1) + 1; // no need to check for overflow
 		}
 		if (ofs > maxOfs)
 			ofs = maxOfs;
@@ -1126,10 +1110,9 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity)
 		if (sizeof(newSize) > 4)
 			newSize |= newSize >> 32;
 
-		if (newSize < SIZE_MAX) {
-			newSize++;
-			newSize = MIN(newSize, ts->a_length >> 1);
-		} else {	// Not bloody likely!
+		newSize++;
+		newSize = MIN(newSize, ts->a_length >> 1);
+		if (newSize == 0) {	// (overflow) Not bloody likely!
 			newSize = minCapacity;
 		}
 
