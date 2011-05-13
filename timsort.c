@@ -111,7 +111,7 @@ struct timsort {
 
 static void binarySort(void *a, size_t hi, size_t start,
 		       comparator compare, void *udata, size_t width);
-static size_t countRunAndMakeAscending(void *a, size_t lo, size_t hi,
+static size_t countRunAndMakeAscending(void *a, size_t hi,
 				       comparator compare, void *udata,
 				       size_t width);
 static void reverseRange(void *a, size_t lo, size_t hi, size_t width);
@@ -266,7 +266,7 @@ int timsort(void *a, size_t nel, size_t width,
 	// If array is small, do a "mini-TimSort" with no merges
 	if (nRemaining < MIN_MERGE) {
 		size_t initRunLen =
-		    countRunAndMakeAscending(a, lo, hi, c, udata, width);
+			countRunAndMakeAscending(ELEM(a, lo), hi - lo, c, udata, width);
 		binarySort(ELEM(a, lo), hi - lo, initRunLen, c, udata, width);
 		return err;
 	}
@@ -284,7 +284,7 @@ int timsort(void *a, size_t nel, size_t width,
 	do {
 		// Identify next run
 		size_t runLen =
-		    countRunAndMakeAscending(a, lo, hi, c, udata, width);
+			countRunAndMakeAscending(ELEM(a, lo), hi - lo, c, udata, width);
 
 		// If run is short, extend to min(minRun, nRemaining)
 		if (runLen < minRun) {
@@ -415,24 +415,24 @@ static void binarySort(void *a, size_t hi, size_t start,
  * @return  the length of the run beginning at the specified position in
  *          the specified array
  */
-static size_t countRunAndMakeAscending(void *a, size_t lo, size_t hi,
+static size_t countRunAndMakeAscending(void *a, size_t hi,
 				       comparator compare, void *udata,
 				       size_t width)
 {
-	assert(lo < hi);
-	size_t runHi = lo + 1;
+	assert(0 < hi);
+	size_t runHi = 1;
 	if (runHi == hi)
 		return 1;
 
 	// Find end of run, and reverse range if descending
 	// if (c.compare(a[runHi++], a[lo]) < 0) { // Descending
-	if (compare(ELEM(a, runHi++), ELEM(a, lo), udata) < 0) {
+	if (compare(ELEM(a, runHi++), a, udata) < 0) {
 		// while (runHi < hi && c.compare(a[runHi], a[runHi - 1]) < 0)
 		while (runHi < hi
 		       && compare(ELEM(a, runHi), ELEM(a, runHi - 1),
 				  udata) < 0)
 			runHi++;
-		reverseRange(a, lo, runHi, width);
+		reverseRange(a, 0, runHi, width);
 	} else {		// Ascending
 		// while (runHi < hi && c.compare(a[runHi], a[runHi - 1]) >= 0)
 		while (runHi < hi
@@ -441,7 +441,7 @@ static size_t countRunAndMakeAscending(void *a, size_t lo, size_t hi,
 			runHi++;
 	}
 
-	return runHi - lo;
+	return runHi;
 }
 
 /**
