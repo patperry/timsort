@@ -282,7 +282,7 @@ int timsort(void *a, size_t nel, size_t width,
 		size_t runLen =
 		    countRunAndMakeAscending(a, nel, c, udata, width);
 
-		// If run is short, extend to min(minRun, nRemaining)
+		// If run is short, extend to min(minRun, nel)
 		if (runLen < minRun) {
 			size_t force = nel <= minRun ? nel : minRun;
 			binarySort(a, force, runLen, c, udata, width);
@@ -320,7 +320,6 @@ out:
  * exclusive are already sorted.
  *
  * @param a the array in which a range is to be sorted
- * @param lo the index of the first element in the range to be sorted
  * @param hi the index after the last element in the range to be sorted
  * @param start the index of the first element in the range that is
  *        not already known to be sorted ({@code lo <= start <= hi})
@@ -348,7 +347,7 @@ static void binarySort(void *a, size_t hi, size_t start,
 		 *   pivot <  all in [right, start).
 		 */
 		while (left < right) {
-			// int mid = (left + right) >> 1;
+			// size_t mid = left + ((right - left) >> 1);
 			// http://stackoverflow.com/questions/4844165/safe-integer-middle-value-formula
 			size_t mid = (left & right) + ((left ^ right) >> 1);
 			if (compare(pivot, ELEM(a, mid), udata) < 0)
@@ -390,20 +389,19 @@ static void binarySort(void *a, size_t hi, size_t start,
  *
  * A run is the longest ascending sequence with:
  *
- *    a[lo] <= a[lo + 1] <= a[lo + 2] <= ...
+ *    a[0] <= a[1] <= a[2] <= ...
  *
  * or the longest descending sequence with:
  *
- *    a[lo] >  a[lo + 1] >  a[lo + 2] >  ...
+ *    a[0] >  a[1] >  a[2] >  ...
  *
  * For its intended use in a stable mergesort, the strictness of the
  * definition of "descending" is needed so that the call can safely
  * reverse a descending sequence without violating stability.
  *
  * @param a the array in which a run is to be counted and possibly reversed
- * @param lo index of the first element in the run
  * @param hi index after the last element that may be contained in the run.
- *        It is required that {@code lo < hi}.
+ *        It is required that {@code 0 < hi}.
  * @param compare the comparator to used for the sort
  * @return  the length of the run beginning at the specified position in
  *          the specified array
@@ -418,16 +416,13 @@ static size_t countRunAndMakeAscending(void *a, size_t hi,
 		return 1;
 
 	// Find end of run, and reverse range if descending
-	// if (c.compare(a[runHi++], a[lo]) < 0) { // Descending
-	if (compare(ELEM(a, runHi++), a, udata) < 0) {
-		// while (runHi < hi && c.compare(a[runHi], a[runHi - 1]) < 0)
+	if (compare(ELEM(a, runHi++), a, udata) < 0) { // Descending
 		while (runHi < hi
 		       && compare(ELEM(a, runHi), ELEM(a, runHi - 1),
 				  udata) < 0)
 			runHi++;
 		reverseRange(a, 0, runHi, width);
 	} else {		// Ascending
-		// while (runHi < hi && c.compare(a[runHi], a[runHi - 1]) >= 0)
 		while (runHi < hi
 		       && compare(ELEM(a, runHi), ELEM(a, runHi - 1),
 				  udata) >= 0)
@@ -624,8 +619,7 @@ static int mergeAt(struct timsort *ts, size_t i)
  * returns the index of the leftmost equal element.
  *
  * @param key the key whose insertion point to search for
- * @param a the array in which to search
- * @param base the index of the first element in the range
+ * @param base the array in which to search
  * @param len the length of the range; must be > 0
  * @param hint the index at which to begin the search, 0 <= hint < n.
  *     The closer hint is to the result, the faster this method will run.
@@ -640,16 +634,14 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 			 size_t hint, comparator compare, void *udata,
 			 size_t width)
 {
-
 	assert(len > 0 && hint >= 0 && hint < len);
 	char *hintp = ELEM(base, hint);
 	size_t lastOfs = 0;
 	size_t ofs = 1;
-	// if (compare(key, a[base + hint]) > 0) {
+
 	if (compare(key, hintp, udata) > 0) {
-		// Gallop right until a[base+hint+lastOfs] < key <= a[base+hint+ofs]
+		// Gallop right until a[hint+lastOfs] < key <= a[hint+ofs]
 		size_t maxOfs = len - hint;
-		//while (ofs < maxOfs && c.compare(key, a[base + hint + ofs]) > 0) {
 		while (ofs < maxOfs
 		       && compare(key, ELEM(hintp, ofs), udata) > 0) {
 			lastOfs = ofs;
@@ -661,10 +653,9 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		// Make offsets relative to base
 		lastOfs += hint + 1;	// POP: we add 1 here so lastOfs stays non-negative
 		ofs += hint;
-	} else {		// key <= a[base + hint]
-		// Gallop left until a[base+hint-ofs] < key <= a[base+hint-lastOfs]
+	} else {		// key <= a[hint]
+		// Gallop left until a[hint-ofs] < key <= a[hint-lastOfs]
 		const size_t maxOfs = hint + 1;
-		//while (ofs < maxOfs && c.compare(key, a[base + hint - ofs]) <= 0) {
 		while (ofs < maxOfs
 		       && compare(key, ELEM(hintp, -ofs), udata) <= 0) {
 			lastOfs = ofs;
@@ -678,26 +669,24 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 		lastOfs = hint + 1 - ofs;	// POP: we add 1 here so lastOfs stays non-negative
 		ofs = hint - tmp;
 	}
-	//  assert -1 <= lastOfs && lastOfs < ofs && ofs <= len;
 	assert(0 <= lastOfs && lastOfs <= ofs && ofs <= len);
 
 	/*
-	 * Now a[base+lastOfs-1] < key <= a[base+ofs], so key belongs somewhere
+	 * Now a[lastOfs-1] < key <= a[ofs], so key belongs somewhere
 	 * to the right of lastOfs but no farther right than ofs.  Do a binary
-	 * search, with invariant a[base + lastOfs - 1] < key <= a[base + ofs].
+	 * search, with invariant a[lastOfs - 1] < key <= a[ofs].
 	 */
 	// lastOfs++; POP: we added 1 above to keep lastOfs non-negative
 	while (lastOfs < ofs) {
 		//size_t m = lastOfs + ((ofs - lastOfs) >> 1);
 		size_t m = (lastOfs & ofs) + ((lastOfs ^ ofs) >> 1);
 
-		// if (c.compare(key, a[base + m]) > 0)
 		if (compare(key, ELEM(base, m), udata) > 0)
-			lastOfs = m + 1;	// a[base + m] < key
+			lastOfs = m + 1;	// a[m] < key
 		else
-			ofs = m;	// key <= a[base + m]
+			ofs = m;	// key <= a[m]
 	}
-	assert(lastOfs == ofs);	// so a[base + ofs - 1] < key <= a[base + ofs]
+	assert(lastOfs == ofs);	// so a[ofs - 1] < key <= a[ofs]
 	return ofs;
 }
 
@@ -706,8 +695,7 @@ static size_t gallopLeft(void *key, void *base, size_t len,
  * key, gallopRight returns the index after the rightmost equal element.
  *
  * @param key the key whose insertion point to search for
- * @param a the array in which to search
- * @param base the index of the first element in the range
+ * @param base the array in which to search
  * @param len the length of the range; must be > 0
  * @param hint the index at which to begin the search, 0 <= hint < n.
  *     The closer hint is to the result, the faster this method will run.
@@ -723,8 +711,9 @@ static size_t gallopRight(void *key, void *base, size_t len,
 	char *hintp = ELEM(base, hint);
 	size_t ofs = 1;
 	size_t lastOfs = 0;
+
 	if (compare(key, hintp, udata) < 0) {
-		// Gallop left until a[b+hint - ofs] <= key < a[b+hint - lastOfs]
+		// Gallop left until a[hint - ofs] <= key < a[hint - lastOfs]
 		size_t maxOfs = hint + 1;
 		while (ofs < maxOfs
 		       && compare(key, ELEM(hintp, -ofs), udata) < 0) {
@@ -734,12 +723,12 @@ static size_t gallopRight(void *key, void *base, size_t len,
 		if (ofs > maxOfs)
 			ofs = maxOfs;
 
-		// Make offsets relative to b
+		// Make offsets relative to base
 		size_t tmp = lastOfs;
 		lastOfs = hint + 1 - ofs;
 		ofs = hint - tmp;
-	} else {		// a[b + hint] <= key
-		// Gallop right until a[b+hint + lastOfs] <= key < a[b+hint + ofs]
+	} else {		// a[hint] <= key
+		// Gallop right until a[hint + lastOfs] <= key < a[hint + ofs]
 		size_t maxOfs = len - hint;
 		while (ofs < maxOfs
 		       && compare(key, ELEM(hintp, ofs), udata) >= 0) {
@@ -749,27 +738,27 @@ static size_t gallopRight(void *key, void *base, size_t len,
 		if (ofs > maxOfs)
 			ofs = maxOfs;
 
-		// Make offsets relative to b
+		// Make offsets relative to base
 		lastOfs += hint + 1;
 		ofs += hint;
 	}
 	assert(0 <= lastOfs && lastOfs <= ofs && ofs <= len);
 
 	/*
-	 * Now a[b + lastOfs - 1] <= key < a[b + ofs], so key belongs somewhere to
+	 * Now a[lastOfs - 1] <= key < a[ofs], so key belongs somewhere to
 	 * the right of lastOfs but no farther right than ofs.  Do a binary
-	 * search, with invariant a[b + lastOfs - 1] <= key < a[b + ofs].
+	 * search, with invariant a[lastOfs - 1] <= key < a[ofs].
 	 */
 	while (lastOfs < ofs) {
 		// size_t m = lastOfs + ((ofs - lastOfs) >> 1);
 		size_t m = (lastOfs & ofs) + ((lastOfs ^ ofs) >> 1);
 
 		if (compare(key, ELEM(base, m), udata) < 0)
-			ofs = m;	// key < a[b + m]
+			ofs = m;	// key < a[m]
 		else
-			lastOfs = m + 1;	// a[b + m] <= key
+			lastOfs = m + 1;	// a[m] <= key
 	}
-	assert(lastOfs == ofs);	// so a[b + ofs - 1] <= key < a[b + ofs]
+	assert(lastOfs == ofs);	// so a[ofs - 1] <= key < a[ofs]
 	return ofs;
 }
 
@@ -783,9 +772,9 @@ static size_t gallopRight(void *key, void *base, size_t len,
  * its twin, mergeHi should be called if len1 >= len2.  (Either method
  * may be called if len1 == len2.)
  *
- * @param base1 index of first element in first run to be merged
+ * @param base1 first element in first run to be merged
  * @param len1  length of first run to be merged (must be > 0)
- * @param base2 index of first element in second run to be merged
+ * @param base2 first element in second run to be merged
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
@@ -815,12 +804,10 @@ static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2,
 	cursor2 += width;
 
 	if (--len2 == 0) {
-		// System.arraycopy(tmp, cursor1, a, dest, len1);
 		memcpy(dest, cursor1, len1 * width);
 		return SUCCESS;
 	}
 	if (len1 == 1) {
-		// System.arraycopy(a, cursor2, a, dest, len2);
 		memcpy(dest, cursor2, len2 * width);
 
 		// a[dest + len2] = tmp[cursor1]; // Last elt of run 1 to end of merge
@@ -934,9 +921,9 @@ outer:
  * len1 >= len2; mergeLo should be called if len1 <= len2.  (Either method
  * may be called if len1 == len2.)
  *
- * @param base1 index of first element in first run to be merged
+ * @param base1 first element in first run to be merged
  * @param len1  length of first run to be merged (must be > 0)
- * @param base2 index of first element in second run to be merged
+ * @param base2 first element in second run to be merged
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
@@ -952,7 +939,6 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 	if (!tmp)
 		return FAILURE;
 
-	// System.arraycopy(a, base2, tmp, 0, len2);
 	memcpy(tmp, base2, len2 * width);
 
 	char *cursor1 = ELEM(base1, len1 - 1);	// Indexes into a
@@ -965,14 +951,12 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 	dest -= width;
 	cursor1 -= width;
 	if (--len1 == 0) {
-		// System.arraycopy(tmp, 0, a, dest - (len2 - 1), len2);
 		memcpy(dest - (len2 - 1) * width, tmp, len2 * width);
 		return SUCCESS;
 	}
 	if (len2 == 1) {
 		dest -= len1 * width;
 		cursor1 -= len1 * width;
-		// System.arraycopy(a, cursor1 + 1, a, dest + 1, len1);
 		memcpy(dest + width, cursor1 + width, len1 * width);
 		// a[dest] = tmp[cursor2];
 		memcpy(dest, cursor2, width);
@@ -1027,7 +1011,6 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 				dest -= count1 * width;
 				cursor1 -= count1 * width;
 				len1 -= count1;
-				// System.arraycopy(a, cursor1 + 1, a, dest + 1, count1);
 				memcpy(dest + width, cursor1 + width,
 				       count1 * width);
 				if (len1 == 0)
@@ -1046,7 +1029,6 @@ static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 				dest -= count2 * width;
 				cursor2 -= count2 * width;
 				len2 -= count2;
-				// System.arraycopy(tmp, cursor2 + 1, a, dest + 1, count2);
 				memcpy(dest + width,
 				       cursor2 + width, count2 * width);
 				if (len2 <= 1)	// len2 == 1 || len2 == 0
@@ -1069,7 +1051,6 @@ outer:
 		assert(len1 > 0);
 		dest -= len1 * width;
 		cursor1 -= len1 * width;
-		// System.arraycopy(a, cursor1 + 1, a, dest + 1, len1);
 		memcpy(dest + width, cursor1 + width, len1 * width);
 		// a[dest] = tmp[cursor2];  // Move first elt of run2 to front of merge
 		memcpy(dest, cursor2, width);
@@ -1079,7 +1060,6 @@ outer:
 	} else {
 		assert(len1 == 0);
 		assert(len2 > 0);
-		//System.arraycopy(tmp, 0, a, dest - (len2 - 1), len2);
 		memcpy(dest - (len2 - 1) * width, tmp, len2 * width);
 	}
 
