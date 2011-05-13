@@ -168,4 +168,4 @@ with
 
     mid = (left & right) + ((left ^ right) >> 1)
 
-This slightly exotic formula is explain on [stackoverflow.com](http://stackoverflow.com/questions/4844165/safe-integer-middle-value-formula).
+This slightly exotic formula is explained on [stackoverflow.com](http://stackoverflow.com/questions/4844165/safe-integer-middle-value-formula).
