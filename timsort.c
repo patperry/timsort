@@ -126,9 +126,9 @@ static size_t gallopLeft(void *key, void *base, size_t len,
 static size_t gallopRight(void *key, void *base, size_t len,
 			  size_t hint, comparator compare, void *udata,
 			  size_t width);
-static int mergeLo(struct timsort *ts, size_t base1, size_t len1, size_t base2,
+static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2,
 		   size_t len2);
-static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
+static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 		   size_t len2);
 static void *ensureCapacity(struct timsort *ts, size_t minCapacity);
 
@@ -622,9 +622,9 @@ static int mergeAt(struct timsort *ts, size_t i)
 
 	// Merge remaining runs, using tmp array with min(len1, len2) elements
 	if (len1 <= len2)
-		return mergeLo(ts, base1, len1, base2, len2);
+		return mergeLo(ts, ELEM(a, base1), len1, ELEM(a, base2), len2);
 	else
-		return mergeHi(ts, base1, len1, base2, len2);
+		return mergeHi(ts, ELEM(a, base1), len1, ELEM(a, base2), len2);
 }
 
 /**
@@ -814,24 +814,22 @@ static size_t gallopRight(void *key, void *base, size_t len,
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
-static int mergeLo(struct timsort *ts, size_t base1, size_t len1, size_t base2,
-		   size_t len2)
+static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, size_t len2)
 {
-	assert(len1 > 0 && len2 > 0 && base1 + len1 == base2);
+	assert(len1 > 0 && len2 > 0 && base1 + len1 * width == base2);
 
 	size_t width = ts->width;
 	// Copy first run into temp array
-	void *a = ts->a;	// For performance
 	void *tmp = ensureCapacity(ts, len1);
 	if (!tmp)
 		return FAILURE;
 
 	// System.arraycopy(a, base1, tmp, 0, len1);
-	memcpy(ELEM(tmp, 0), ELEM(a, base1), len1 * width);
+	memcpy(tmp, base1, len1 * width);
 
 	char *cursor1 = tmp;	// Indexes into tmp array
-	char *cursor2 = ELEM(a, base2);	// Indexes int a
-	char *dest = ELEM(a, base1);	// Indexes int a
+	char *cursor2 = base2;	// Indexes int a
+	char *dest = base1;	// Indexes int a
 
 	// Move first element of second run and deal with degenerate cases
 	// a[dest++] = a[cursor2++];
@@ -961,25 +959,24 @@ outer:
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
-static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
+static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 		   size_t len2)
 {
-	assert(len1 > 0 && len2 > 0 && base1 + len1 == base2);
+	assert(len1 > 0 && len2 > 0 && base1 + len1 * width == base2);
 
 	size_t width = ts->width;
 
 	// Copy second run into temp array
-	void *a = ts->a;	// For performance
 	void *tmp = ensureCapacity(ts, len2);
 	if (!tmp)
 		return FAILURE;
 
 	// System.arraycopy(a, base2, tmp, 0, len2);
-	memcpy(tmp, ELEM(a, base2), len2 * width);
+	memcpy(tmp, base2, len2 * width);
 
-	char *cursor1 = ELEM(a, base1 + len1 - 1);	// Indexes into a
+	char *cursor1 = ELEM(base1, len1 - 1);	// Indexes into a
 	char *cursor2 = ELEM(tmp, len2 - 1);	// Indexes into tmp array
-	char *dest = ELEM(a, base2 + len2 - 1);	// Indexes into a
+	char *dest = ELEM(base2, len2 - 1);	// Indexes into a
 
 	// Move last element of first run and deal with degenerate cases
 	// a[dest--] = a[cursor1--];
@@ -1042,8 +1039,8 @@ static int mergeHi(struct timsort *ts, size_t base1, size_t len1, size_t base2,
 		do {
 			assert(len1 > 0 && len2 > 1);
 			count1 =
-				len1 - gallopRight(cursor2, ELEM(a, base1),
-					       len1, len1 - 1, compare, udata,
+				len1 - gallopRight(cursor2, base1,
+						len1, len1 - 1, compare, udata,
 					       width);
 			if (count1 != 0) {
 				dest -= count1 * width;
