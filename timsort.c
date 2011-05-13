@@ -105,7 +105,7 @@ struct timsort {
 	 * and keeping all the info explicit simplifies the code.
 	 */
 	size_t stackSize;	// Number of pending runs on stack
-	size_t *runBase;
+	void **runBase;
 	size_t *runLen;
 };
 
@@ -116,7 +116,7 @@ static size_t countRunAndMakeAscending(void *a, size_t hi,
 				       size_t width);
 static void reverseRange(void *a, size_t lo, size_t hi, size_t width);
 static size_t minRunLength(size_t n);
-static void pushRun(struct timsort *ts, size_t runBase, size_t runLen);
+static void pushRun(struct timsort *ts, void *runBase, size_t runLen);
 static int mergeCollapse(struct timsort *ts);
 static int mergeForceCollapse(struct timsort *ts);
 static int mergeAt(struct timsort *ts, size_t i);
@@ -256,18 +256,15 @@ int timsort(void *a, size_t nel, size_t width,
 	assert(c);
 
 	int err = SUCCESS;
-	size_t lo = 0;
-	size_t hi = nel;
-	size_t nRemaining = hi - lo;
 
-	if (nRemaining < 2 || !width)
+	if (nel < 2 || !width)
 		return err;	// Arrays of size 0 and 1 are always sorted
 
 	// If array is small, do a "mini-TimSort" with no merges
-	if (nRemaining < MIN_MERGE) {
+	if (nel < MIN_MERGE) {
 		size_t initRunLen =
-			countRunAndMakeAscending(ELEM(a, lo), hi - lo, c, udata, width);
-		binarySort(ELEM(a, lo), hi - lo, initRunLen, c, udata, width);
+			countRunAndMakeAscending(a, nel, c, udata, width);
+		binarySort(a, nel, initRunLen, c, udata, width);
 		return err;
 	}
 
@@ -280,32 +277,31 @@ int timsort(void *a, size_t nel, size_t width,
 	if ((err = timsort_init(&ts, a, nel, c, udata, width)))
 		return err;
 
-	size_t minRun = minRunLength(nRemaining);
+	size_t minRun = minRunLength(nel);
 	do {
 		// Identify next run
 		size_t runLen =
-			countRunAndMakeAscending(ELEM(a, lo), hi - lo, c, udata, width);
+			countRunAndMakeAscending(a, nel, c, udata, width);
 
 		// If run is short, extend to min(minRun, nRemaining)
 		if (runLen < minRun) {
 			size_t force =
-			    nRemaining <= minRun ? nRemaining : minRun;
-			binarySort(ELEM(a, lo), force, runLen, c, udata,
+			    nel <= minRun ? nel : minRun;
+			binarySort(a, force, runLen, c, udata,
 				   width);
 			runLen = force;
 		}
 		// Push run onto pending-run stack, and maybe merge
-		pushRun(&ts, lo, runLen);
+		pushRun(&ts, a, runLen);
 		if ((err = mergeCollapse(&ts)))
 			goto out;
 
 		// Advance to find next run
-		lo += runLen;
-		nRemaining -= runLen;
-	} while (nRemaining != 0);
+		a += runLen * width;
+		nel -= runLen;
+	} while (nel != 0);
 
 	// Merge all remaining runs to complete sort
-	assert(lo == hi);
 	if ((err = mergeForceCollapse(&ts)))
 		goto out;
 
@@ -498,7 +494,7 @@ static size_t minRunLength(size_t n)
  * @param runBase index of the first element in the run
  * @param runLen  the number of elements in the run
  */
-static void pushRun(struct timsort *ts, size_t runBase, size_t runLen)
+static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	ts->runBase[ts->stackSize] = runBase;
 	ts->runLen[ts->stackSize] = runLen;
@@ -575,14 +571,13 @@ static int mergeAt(struct timsort *ts, size_t i)
 	assert(i == ts->stackSize - 2 || i == ts->stackSize - 3);
 
 	size_t width = ts->width;
-	void *a = ts->a;
 
-	size_t base1 = ts->runBase[i];
+	void *base1 = ts->runBase[i];
 	size_t len1 = ts->runLen[i];
-	size_t base2 = ts->runBase[i + 1];
+	void *base2 = ts->runBase[i + 1];
 	size_t len2 = ts->runLen[i + 1];
 	assert(len1 > 0 && len2 > 0);
-	assert(base1 + len1 == base2);
+	assert(base1 + len1 * width == base2);
 
 	/*
 	 * Record the length of the combined runs; if i is the 3rd-last
@@ -601,10 +596,10 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * in run1 can be ignored (because they're already in place).
 	 */
 	size_t k =
-		gallopRight(ELEM(a, base2), ELEM(a, base1), len1, 0, ts->c, ts->udata,
+		gallopRight(base2, base1, len1, 0, ts->c, ts->udata,
 			width);
 	assert(k >= 0);
-	base1 += k;
+	base1 += k * width;
 	len1 -= k;
 	if (len1 == 0)
 		return SUCCESS;
@@ -614,7 +609,7 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * in run2 can be ignored (because they're already in place).
 	 */
 	len2 =
-		gallopLeft(ELEM(a, base1 + len1 - 1), ELEM(a, base2), len2, len2 - 1,
+		gallopLeft(ELEM(base1, len1 - 1), base2, len2, len2 - 1,
 		       ts->c, ts->udata, width);
 	assert(len2 >= 0);
 	if (len2 == 0)
@@ -622,9 +617,9 @@ static int mergeAt(struct timsort *ts, size_t i)
 
 	// Merge remaining runs, using tmp array with min(len1, len2) elements
 	if (len1 <= len2)
-		return mergeLo(ts, ELEM(a, base1), len1, ELEM(a, base2), len2);
+		return mergeLo(ts, base1, len1, base2, len2);
 	else
-		return mergeHi(ts, ELEM(a, base1), len1, ELEM(a, base2), len2);
+		return mergeHi(ts, base1, len1, base2, len2);
 }
 
 /**
@@ -816,9 +811,10 @@ static size_t gallopRight(void *key, void *base, size_t len,
  */
 static int mergeLo(struct timsort *ts, void *base1, size_t len1, void *base2, size_t len2)
 {
+	size_t width = ts->width;
+
 	assert(len1 > 0 && len2 > 0 && base1 + len1 * width == base2);
 
-	size_t width = ts->width;
 	// Copy first run into temp array
 	void *tmp = ensureCapacity(ts, len1);
 	if (!tmp)
@@ -962,9 +958,10 @@ outer:
 static int mergeHi(struct timsort *ts, void *base1, size_t len1, void *base2,
 		   size_t len2)
 {
+	size_t width = ts->width;
+
 	assert(len1 > 0 && len2 > 0 && base1 + len1 * width == base2);
 
-	size_t width = ts->width;
 
 	// Copy second run into temp array
 	void *tmp = ensureCapacity(ts, len2);
