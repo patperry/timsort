@@ -112,10 +112,11 @@ the index types.
 
 -   In `ensureCapacity`, I replaced
 
+        newSize++;
         if (newSize < 0) // Not bloody likely!
             newSize = minCapacity;
         else
-            newSize = MIN(newSize, a.length >> 1);
+            newSize = Math.min(newSize, a.length >>> 1);
 
     with
 
@@ -125,10 +126,6 @@ the index types.
         } else {	// Not bloody likely!
             newSize = minCapacity;
         }
-
-
-        if (sizeof(newSize) > 4)
-            newSize |= newSize >> 32;
 
 -   I re-wrote `reverseRange` to ensure that `hi` never becomes negative.
 
