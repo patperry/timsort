@@ -56,6 +56,13 @@
  */
 #define INITIAL_TMP_STORAGE_LENGTH 256
 
+/**
+ * Maximum stack size.  This depends on MIN_MERGE and sizeof(size_t).
+ */
+#define MAX_STACK 85
+#undef MALLOC_STACK
+
+
 typedef int (*comparator) (const void *x, const void *y, void *udata);
 
 #define ELEM(a,i) ((char *)(a) + (i) * width)
@@ -103,10 +110,20 @@ struct timsort {
 	 * and keeping all the info explicit simplifies the code.
 	 */
 	size_t stackSize;	// Number of pending runs on stack
+	size_t stackLen; // maximum stack size
+#ifdef MALLOC_STACK
 	void **runBase;
 	size_t *runLen;
-	size_t stackLen; // maximum stack size
+#else
+	void *runBase[MAX_STACK];
+	size_t runLen[MAX_STACK];
+#endif
 };
+
+static int timsort_init(struct timsort *ts, void *a, size_t len,
+			int (*c) (const void *, const void *, void *),
+			void *udata, size_t width);
+static void timsort_deinit(struct timsort *ts);
 
 static void binarySort(void *a, size_t hi, size_t start,
 		       comparator compare, void *udata, size_t width);
@@ -225,6 +242,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 *
 	 * If len < B[m], then stackLen < m:
 	 */
+#ifdef MALLOC_STACK
 	ts->stackLen = (len < 359 ? 5
 			: len < 4220 ? 10
 			: len < 76210 ? 16 : len < 4885703256ULL ? 39 : 85);
@@ -237,13 +255,14 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 
 	ts->runBase = malloc(ts->stackLen * sizeof(ts->runBase[0]));
 	ts->runLen = malloc(ts->stackLen * sizeof(ts->runLen[0]));
+#else
+	ts->stackLen = MAX_STACK;
+#endif
 
 	if (ts->tmp && ts->runBase && ts->runLen) {
 		return SUCCESS;
 	} else {
-		free(ts->tmp);
-		free(ts->runBase);
-		free(ts->runLen);
+		timsort_deinit(ts);
 		return FAILURE;
 	}
 }
@@ -251,8 +270,10 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 static void timsort_deinit(struct timsort *ts)
 {
 	free(ts->tmp);
+#ifdef MALLOC_STACK
 	free(ts->runBase);
 	free(ts->runLen);
+#endif
 }
 
 int timsort(void *a, size_t nel, size_t width,
