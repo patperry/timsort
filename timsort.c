@@ -348,10 +348,9 @@ static void binarySort(void *a, size_t hi, size_t start,
 	char *startp = ELEM(a, start);
 
 	for (; start < hi; start++, startp += width) {
-		memcpy(pivot, startp, width);
 
 		// Set left (and right) to the index where a[start] (pivot) belongs
-		char *left = a;
+		char *leftp = a;
 		size_t right = start;
 
 		/*
@@ -361,11 +360,11 @@ static void binarySort(void *a, size_t hi, size_t start,
 		 */
 		while (0 < right) {
 			size_t mid = right >> 1;
-			char *pmid = ELEM(left, mid);
-			if (compare(pivot, pmid, udata) < 0) {
+			char *midp = ELEM(leftp, mid);
+			if (compare(startp, midp, udata) < 0) {
 				right = mid;
 			} else {
-				left = pmid + width;
+				leftp = midp + width;
 				right -= (mid + 1);
 			}
 		}
@@ -378,12 +377,13 @@ static void binarySort(void *a, size_t hi, size_t start,
 		 * first slot after them -- that's why this sort is stable.
 		 * Slide elements over to make room to make room for pivot.
 		 */
-		size_t n = startp - left; // The number of elements to move
-		memmove(left + width, left, n);
+		size_t n = startp - leftp; // The number of bytes to move
 
+		memcpy(pivot, startp, width);
+		memmove(leftp + width, leftp, n);
 
 		// a[left] = pivot;
-		memcpy(left, pivot, width);
+		memcpy(leftp, pivot, width);
 	}
 }
 
