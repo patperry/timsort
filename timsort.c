@@ -18,7 +18,6 @@
 #include <assert.h>		// assert
 #include <errno.h>		// EINVAL
 #include <stddef.h>		// size_t, NULL
-#include <stdint.h>		// SIZE_MAX
 #include <stdlib.h>		// malloc, realloc, free
 #include <string.h>		// memcpy, memmove
 #include "timsort.h"
@@ -228,7 +227,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 */
 	ts->stackLen = (len < 359 ? 5
 			: len < 4220 ? 10
-			: len < 76210 ? 16 : len < 4885703256 ? 39 : 85);
+			: len < 76210 ? 16 : len < 4885703256ULL ? 39 : 85);
 
 	/* Note that this is slightly more liberal than in the Java
 	 * implementation.  The discrepancy might be because the Java
