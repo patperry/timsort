@@ -60,7 +60,13 @@
  * Maximum stack size.  This depends on MIN_MERGE and sizeof(size_t).
  */
 #define MAX_STACK 85
-#undef MALLOC_STACK
+
+/**
+ * Define MALLOC_STACK if you want to allocate the run stack on the heap.
+ * Otherwise, 2* MAX_STACK * sizeof(size_t) ~ 1.3K gets reserved on the
+ * call stack.
+ */
+/* #undef MALLOC_STACK */
 
 
 typedef int (*comparator) (const void *x, const void *y, void *udata);
@@ -71,6 +77,11 @@ typedef int (*comparator) (const void *x, const void *y, void *udata);
 
 #define SUCCESS 0
 #define FAILURE (-1)
+
+struct timsort_run {
+	void *base;
+	size_t len;
+};
 
 struct timsort {
 	/**
@@ -112,11 +123,9 @@ struct timsort {
 	size_t stackSize;	// Number of pending runs on stack
 	size_t stackLen; // maximum stack size
 #ifdef MALLOC_STACK
-	void **runBase;
-	size_t *runLen;
+	struct timsort_run *run;
 #else
-	void *runBase[MAX_STACK];
-	size_t runLen[MAX_STACK];
+	struct timsort_run run[MAX_STACK];
 #endif
 };
 
@@ -253,13 +262,12 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 */
 	//stackLen = (len < 120 ? 5 : len < 1542 ? 10 : len < 119151 ? 19 : 40);
 
-	ts->runBase = malloc(ts->stackLen * sizeof(ts->runBase[0]));
-	ts->runLen = malloc(ts->stackLen * sizeof(ts->runLen[0]));
+	ts->run = malloc(ts->stackLen * sizeof(ts->run[0]));
 #else
 	ts->stackLen = MAX_STACK;
 #endif
 
-	if (ts->tmp && ts->runBase && ts->runLen) {
+	if (ts->tmp && ts->run) {
 		return SUCCESS;
 	} else {
 		timsort_deinit(ts);
@@ -271,8 +279,7 @@ static void timsort_deinit(struct timsort *ts)
 {
 	free(ts->tmp);
 #ifdef MALLOC_STACK
-	free(ts->runBase);
-	free(ts->runLen);
+	free(ts->run);
 #endif
 }
 
@@ -524,9 +531,7 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	assert(ts->stackSize < ts->stackLen);
 
-	ts->runBase[ts->stackSize] = runBase;
-	ts->runLen[ts->stackSize] = runLen;
-	ts->stackSize++;
+	ts->run[ts->stackSize++] = (struct timsort_run){ runBase, runLen };
 }
 
 /**
@@ -547,13 +552,13 @@ static int mergeCollapse(struct timsort *ts)
 	while (ts->stackSize > 1) {
 		size_t n = ts->stackSize - 2;
 		if (n > 0
-		    && ts->runLen[n - 1] <= ts->runLen[n] + ts->runLen[n + 1]) {
-			if (ts->runLen[n - 1] < ts->runLen[n + 1])
+		    && ts->run[n - 1].len <= ts->run[n].len + ts->run[n + 1].len) {
+			if (ts->run[n - 1].len < ts->run[n + 1].len)
 				n--;
 			err = mergeAt(ts, n);
 			if (err)
 				break;
-		} else if (ts->runLen[n] <= ts->runLen[n + 1]) {
+		} else if (ts->run[n].len <= ts->run[n + 1].len) {
 			err = mergeAt(ts, n);
 			if (err)
 				break;
@@ -575,7 +580,7 @@ static int mergeForceCollapse(struct timsort *ts)
 
 	while (ts->stackSize > 1) {
 		size_t n = ts->stackSize - 2;
-		if (n > 0 && ts->runLen[n - 1] < ts->runLen[n + 1])
+		if (n > 0 && ts->run[n - 1].len < ts->run[n + 1].len)
 			n--;
 		err = mergeAt(ts, n);
 		if (err)
@@ -600,10 +605,10 @@ static int mergeAt(struct timsort *ts, size_t i)
 
 	size_t width = ts->width;
 
-	void *base1 = ts->runBase[i];
-	size_t len1 = ts->runLen[i];
-	void *base2 = ts->runBase[i + 1];
-	size_t len2 = ts->runLen[i + 1];
+	void *base1 = ts->run[i].base;
+	size_t len1 = ts->run[i].len;
+	void *base2 = ts->run[i + 1].base;
+	size_t len2 = ts->run[i + 1].len;
 	assert(len1 > 0 && len2 > 0);
 	assert(base1 + len1 * width == base2);
 
@@ -612,10 +617,9 @@ static int mergeAt(struct timsort *ts, size_t i)
 	 * run now, also slide over the last run (which isn't involved
 	 * in this merge).  The current run (i+1) goes away in any case.
 	 */
-	ts->runLen[i] = len1 + len2;
+	ts->run[i].len = len1 + len2;
 	if (i == ts->stackSize - 3) {
-		ts->runBase[i + 1] = ts->runBase[i + 2];
-		ts->runLen[i + 1] = ts->runLen[i + 2];
+		ts->run[i + 1] = ts->run[i + 2];
 	}
 	ts->stackSize--;
 
