@@ -15,30 +15,29 @@
  * limitations under the License.
  */
 
- static void NAME(binarySort) (void *a, size_t hi, size_t start,
-			 comparator compare, void *udata, size_t width);
+static void NAME(binarySort) (void *a, size_t hi, size_t start,
+			      comparator compare, void *udata, size_t width);
 static size_t NAME(countRunAndMakeAscending) (void *a, size_t hi,
-					comparator compare, void *udata,
-				       size_t width);
-static void NAME(reverseRange)(void *a, size_t hi, size_t width);
-static int NAME(mergeCollapse)(struct timsort *ts, size_t width);
-static int NAME(mergeForceCollapse)(struct timsort *ts, size_t width);
-static int NAME(mergeAt)(struct timsort *ts, size_t i, size_t width);
-static size_t NAME(gallopLeft)(void *key, void *base, size_t len,
-			size_t hint, comparator compare, void *udata,
-			 size_t width);
-static size_t NAME(gallopRight)(void *key, void *base, size_t len,
-			  size_t hint, comparator compare, void *udata,
-			  size_t width);
-static int NAME(mergeLo)(struct timsort *ts, void *base1, size_t len1, void *base2,
-		size_t len2, size_t width);
-static int NAME(mergeHi)(struct timsort *ts, void *base1, size_t len1, void *base2,
-		size_t len2, size_t width);
+					      comparator compare, void *udata,
+					      size_t width);
+static void NAME(reverseRange) (void *a, size_t hi, size_t width);
+static int NAME(mergeCollapse) (struct timsort * ts, size_t width);
+static int NAME(mergeForceCollapse) (struct timsort * ts, size_t width);
+static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width);
+static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
+				size_t hint, comparator compare, void *udata,
+				size_t width);
+static size_t NAME(gallopRight) (void *key, void *base, size_t len,
+				 size_t hint, comparator compare, void *udata,
+				 size_t width);
+static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
+			  void *base2, size_t len2, size_t width);
+static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
+			  void *base2, size_t len2, size_t width);
 
-
-static int NAME(timsort)(void *a, size_t nel, size_t width,
-			int (*c) (const void *, const void *, void *), void *udata)
-{
+static int NAME(timsort) (void *a, size_t nel, size_t width,
+			  int (*c) (const void *, const void *, void *),
+			  void *udata) {
 	assert(a || !nel || !width);
 	assert(nel >= 0);
 	assert(width >= 0);
@@ -52,8 +51,8 @@ static int NAME(timsort)(void *a, size_t nel, size_t width,
 	// If array is small, do a "mini-TimSort" with no merges
 	if (nel < MIN_MERGE) {
 		size_t initRunLen =
-			CALL(countRunAndMakeAscending)(a, nel, c, udata, width);
-		CALL(binarySort)(a, nel, initRunLen, c, udata, width);
+		    CALL(countRunAndMakeAscending) (a, nel, c, udata, width);
+		CALL(binarySort) (a, nel, initRunLen, c, udata, width);
 		return err;
 	}
 
@@ -70,17 +69,17 @@ static int NAME(timsort)(void *a, size_t nel, size_t width,
 	do {
 		// Identify next run
 		size_t runLen =
-			CALL(countRunAndMakeAscending)(a, nel, c, udata, width);
+		    CALL(countRunAndMakeAscending) (a, nel, c, udata, width);
 
 		// If run is short, extend to min(minRun, nel)
 		if (runLen < minRun) {
 			size_t force = nel <= minRun ? nel : minRun;
-			CALL(binarySort)(a, force, runLen, c, udata, width);
+			CALL(binarySort) (a, force, runLen, c, udata, width);
 			runLen = force;
 		}
 		// Push run onto pending-run stack, and maybe merge
 		pushRun(&ts, a, runLen);
-		if ((err = CALL(mergeCollapse)(&ts, width)))
+		if ((err = CALL(mergeCollapse) (&ts, width)))
 			goto out;
 
 		// Advance to find next run
@@ -89,7 +88,7 @@ static int NAME(timsort)(void *a, size_t nel, size_t width,
 	} while (nel != 0);
 
 	// Merge all remaining runs to complete sort
-	if ((err = CALL(mergeForceCollapse)(&ts, width)))
+	if ((err = CALL(mergeForceCollapse) (&ts, width)))
 		goto out;
 
 	assert(ts.stackSize == 1);
@@ -97,7 +96,6 @@ out:
 	timsort_deinit(&ts);
 	return err;
 }
-
 
 /**
  * Sorts the specified portion of the specified array using a binary
@@ -116,9 +114,8 @@ out:
  *        not already known to be sorted ({@code lo <= start <= hi})
  * @param c comparator to used for the sort
  */
-static void NAME(binarySort)(void *a, size_t hi, size_t start,
-			     comparator compare, void *udata, size_t width)
-{
+static void NAME(binarySort) (void *a, size_t hi, size_t start,
+			      comparator compare, void *udata, size_t width) {
 	assert(0 <= start && start <= hi);
 
 	DEFINE_TEMP(pivot);
@@ -158,7 +155,7 @@ static void NAME(binarySort)(void *a, size_t hi, size_t start,
 		 * first slot after them -- that's why this sort is stable.
 		 * Slide elements over to make room to make room for pivot.
 		 */
-		size_t n = startp - leftp; // The number of bytes to move
+		size_t n = startp - leftp;	// The number of bytes to move
 
 		ASSIGN(pivot, startp);
 		memmove(INCPTR(leftp), leftp, n);
@@ -192,10 +189,9 @@ static void NAME(binarySort)(void *a, size_t hi, size_t start,
  * @return  the length of the run beginning at the specified position in
  *          the specified array
  */
-static size_t NAME(countRunAndMakeAscending)(void *a, size_t hi,
-					     comparator compare, void *udata,
-					     size_t width)
-{
+static size_t NAME(countRunAndMakeAscending) (void *a, size_t hi,
+					      comparator compare, void *udata,
+					      size_t width) {
 	assert(0 < hi);
 	size_t runHi = 1;
 	if (runHi == hi)
@@ -206,13 +202,13 @@ static size_t NAME(countRunAndMakeAscending)(void *a, size_t hi,
 	runHi++;
 
 	// Find end of run, and reverse range if descending
-	if (compare(cur, a, udata) < 0) { // Descending
+	if (compare(cur, a, udata) < 0) {	// Descending
 		while (runHi < hi && compare(next, cur, udata) < 0) {
 			runHi++;
 			cur = next;
 			next = INCPTR(next);
 		}
-		CALL(reverseRange)(a, runHi, width);
+		CALL(reverseRange) (a, runHi, width);
 	} else {		// Ascending
 		while (runHi < hi && compare(next, cur, udata) >= 0) {
 			runHi++;
@@ -230,8 +226,7 @@ static size_t NAME(countRunAndMakeAscending)(void *a, size_t hi,
  * @param a the array in which a range is to be reversed
  * @param hi the index after the last element in the range to be reversed
  */
-static void NAME(reverseRange)(void *a, size_t hi, size_t width)
-{
+static void NAME(reverseRange) (void *a, size_t hi, size_t width) {
 	assert(hi > 0);
 
 	DEFINE_TEMP(t);
@@ -259,21 +254,21 @@ static void NAME(reverseRange)(void *a, size_t hi, size_t width)
  * so the invariants are guaranteed to hold for i < stackSize upon
  * entry to the method.
  */
-static int NAME(mergeCollapse)(struct timsort *ts, size_t width)
-{
+static int NAME(mergeCollapse) (struct timsort * ts, size_t width) {
 	int err = SUCCESS;
 
 	while (ts->stackSize > 1) {
 		size_t n = ts->stackSize - 2;
 		if (n > 0
-		    && ts->run[n - 1].len <= ts->run[n].len + ts->run[n + 1].len) {
+		    && ts->run[n - 1].len <=
+		    ts->run[n].len + ts->run[n + 1].len) {
 			if (ts->run[n - 1].len < ts->run[n + 1].len)
 				n--;
-			err = CALL(mergeAt)(ts, n, width);
+			err = CALL(mergeAt) (ts, n, width);
 			if (err)
 				break;
 		} else if (ts->run[n].len <= ts->run[n + 1].len) {
-			err = CALL(mergeAt)(ts, n, width);
+			err = CALL(mergeAt) (ts, n, width);
 			if (err)
 				break;
 		} else {
@@ -288,15 +283,14 @@ static int NAME(mergeCollapse)(struct timsort *ts, size_t width)
  * Merges all runs on the stack until only one remains.  This method is
  * called once, to complete the sort.
  */
-static int NAME(mergeForceCollapse)(struct timsort *ts, size_t width)
-{
+static int NAME(mergeForceCollapse) (struct timsort * ts, size_t width) {
 	int err = SUCCESS;
 
 	while (ts->stackSize > 1) {
 		size_t n = ts->stackSize - 2;
 		if (n > 0 && ts->run[n - 1].len < ts->run[n + 1].len)
 			n--;
-		err = CALL(mergeAt)(ts, n, width);
+		err = CALL(mergeAt) (ts, n, width);
 		if (err)
 			break;
 	}
@@ -311,8 +305,7 @@ static int NAME(mergeForceCollapse)(struct timsort *ts, size_t width)
  *
  * @param i stack index of the first of the two runs to merge
  */
-static int NAME(mergeAt)(struct timsort *ts, size_t i, size_t width)
-{
+static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width) {
 	assert(ts->stackSize >= 2);
 	assert(i >= 0);
 	assert(i == ts->stackSize - 2 || i == ts->stackSize - 3);
@@ -339,8 +332,8 @@ static int NAME(mergeAt)(struct timsort *ts, size_t i, size_t width)
 	 * Find where the first element of run2 goes in run1. Prior elements
 	 * in run1 can be ignored (because they're already in place).
 	 */
-	size_t k = CALL(gallopRight)(base2, base1, len1, 0, ts->c, ts->udata,
-			       width);
+	size_t k = CALL(gallopRight) (base2, base1, len1, 0, ts->c, ts->udata,
+				      width);
 	assert(k >= 0);
 	base1 = ELEM(base1, k);
 	len1 -= k;
@@ -352,17 +345,17 @@ static int NAME(mergeAt)(struct timsort *ts, size_t i, size_t width)
 	 * in run2 can be ignored (because they're already in place).
 	 */
 	len2 =
-		CALL(gallopLeft)(ELEM(base1, len1 - 1), base2, len2, len2 - 1,
-		       ts->c, ts->udata, width);
+	    CALL(gallopLeft) (ELEM(base1, len1 - 1), base2, len2, len2 - 1,
+			      ts->c, ts->udata, width);
 	assert(len2 >= 0);
 	if (len2 == 0)
 		return SUCCESS;
 
 	// Merge remaining runs, using tmp array with min(len1, len2) elements
 	if (len1 <= len2)
-		return CALL(mergeLo)(ts, base1, len1, base2, len2, width);
+		return CALL(mergeLo) (ts, base1, len1, base2, len2, width);
 	else
-		return CALL(mergeHi)(ts, base1, len1, base2, len2, width);
+		return CALL(mergeHi) (ts, base1, len1, base2, len2, width);
 }
 
 /**
@@ -382,10 +375,9 @@ static int NAME(mergeAt)(struct timsort *ts, size_t i, size_t width)
  *    the first k elements of a should precede key, and the last n - k
  *    should follow it.
  */
-static size_t NAME(gallopLeft)(void *key, void *base, size_t len,
-			size_t hint, comparator compare, void *udata,
-			 size_t width)
-{
+static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
+				size_t hint, comparator compare, void *udata,
+				size_t width) {
 	assert(len > 0 && hint >= 0 && hint < len);
 	char *hintp = ELEM(base, hint);
 	size_t lastOfs = 0;
@@ -455,10 +447,9 @@ static size_t NAME(gallopLeft)(void *key, void *base, size_t len,
  * @param c the comparator used to order the range, and to search
  * @return the int k,  0 <= k <= n such that a[b + k - 1] <= key < a[b + k]
  */
-static size_t NAME(gallopRight)(void *key, void *base, size_t len,
-				size_t hint, comparator compare, void *udata,
-			  size_t width)
-{
+static size_t NAME(gallopRight) (void *key, void *base, size_t len,
+				 size_t hint, comparator compare, void *udata,
+				 size_t width) {
 	assert(len > 0 && hint >= 0 && hint < len);
 
 	char *hintp = ELEM(base, hint);
@@ -531,9 +522,8 @@ static size_t NAME(gallopRight)(void *key, void *base, size_t len,
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
-static int NAME(mergeLo)(struct timsort *ts, void *base1, size_t len1, void *base2,
-		size_t len2, size_t width)
-{
+static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
+			  void *base2, size_t len2, size_t width) {
 	assert(len1 > 0 && len2 > 0 && ELEM(base1, len1) == base2);
 
 	// Copy first run into temp array
@@ -611,8 +601,8 @@ static int NAME(mergeLo)(struct timsort *ts, void *base1, size_t len1, void *bas
 		do {
 			assert(len1 > 1 && len2 > 0);
 			count1 =
-				CALL(gallopRight)(cursor2, cursor1, len1, 0,
-					compare, udata, width);
+			    CALL(gallopRight) (cursor2, cursor1, len1, 0,
+					       compare, udata, width);
 			if (count1 != 0) {
 				memcpy(dest, cursor1, LEN(count1));
 				dest = ELEM(dest, count1);
@@ -628,8 +618,8 @@ static int NAME(mergeLo)(struct timsort *ts, void *base1, size_t len1, void *bas
 				goto outer;
 
 			count2 =
-				CALL(gallopLeft)(cursor1, cursor2, len2, 0,
-				       compare, udata, width);
+			    CALL(gallopLeft) (cursor1, cursor2, len2, 0,
+					      compare, udata, width);
 			if (count2 != 0) {
 				memcpy(dest, cursor2, LEN(count2));
 				dest = ELEM(dest, count2);
@@ -678,9 +668,8 @@ outer:
  *        (must be aBase + aLen)
  * @param len2  length of second run to be merged (must be > 0)
  */
-static int NAME(mergeHi)(struct timsort *ts, void *base1, size_t len1, void *base2,
-		size_t len2, size_t width)
-{
+static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
+			  void *base2, size_t len2, size_t width) {
 	assert(len1 > 0 && len2 > 0 && ELEM(base1, len1) == base2);
 
 	// Copy second run into temp array
@@ -700,7 +689,7 @@ static int NAME(mergeHi)(struct timsort *ts, void *base1, size_t len1, void *bas
 	dest = DECPTR(dest);
 	cursor1 = DECPTR(cursor1);
 	if (--len1 == 0) {
-		memcpy(ELEM(dest, - (len2 - 1)), tmp, LEN(len2));
+		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
 		return SUCCESS;
 	}
 	if (len2 == 1) {
@@ -753,14 +742,15 @@ static int NAME(mergeHi)(struct timsort *ts, void *base1, size_t len1, void *bas
 		do {
 			assert(len1 > 0 && len2 > 1);
 			count1 =
-				len1 - CALL(gallopRight)(cursor2, base1,
-					       len1, len1 - 1, compare, udata,
-					       width);
+			    len1 - CALL(gallopRight) (cursor2, base1,
+						      len1, len1 - 1, compare,
+						      udata, width);
 			if (count1 != 0) {
 				dest = ELEM(dest, -count1);
 				cursor1 = ELEM(cursor1, -count1);
 				len1 -= count1;
-				memcpy(INCPTR(dest), INCPTR(cursor1), LEN(count1));
+				memcpy(INCPTR(dest), INCPTR(cursor1),
+				       LEN(count1));
 				if (len1 == 0)
 					goto outer;
 			}
@@ -771,14 +761,15 @@ static int NAME(mergeHi)(struct timsort *ts, void *base1, size_t len1, void *bas
 				goto outer;
 
 			count2 =
-				len2 - CALL(gallopLeft)(cursor1, tmp, len2,
-					      len2 - 1, compare, udata, width);
+			    len2 - CALL(gallopLeft) (cursor1, tmp, len2,
+						     len2 - 1, compare, udata,
+						     width);
 			if (count2 != 0) {
 				dest = ELEM(dest, -count2);
 				cursor2 = ELEM(cursor2, -count2);
 				len2 -= count2;
 				memcpy(INCPTR(dest),
-					INCPTR(cursor2), LEN(count2));
+				       INCPTR(cursor2), LEN(count2));
 				if (len2 <= 1)	// len2 == 1 || len2 == 0
 					goto outer;
 			}
@@ -808,9 +799,8 @@ outer:
 	} else {
 		assert(len1 == 0);
 		assert(len2 > 0);
-		memcpy(ELEM(dest,  - (len2 - 1)), tmp, LEN(len2));
+		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
 	}
 
 	return SUCCESS;
 }
-

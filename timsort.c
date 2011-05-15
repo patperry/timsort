@@ -128,7 +128,7 @@ struct timsort {
 	 * and keeping all the info explicit simplifies the code.
 	 */
 	size_t stackSize;	// Number of pending runs on stack
-	size_t stackLen; // maximum stack size
+	size_t stackLen;	// maximum stack size
 #ifdef MALLOC_STACK
 	struct timsort_run *run;
 #else
@@ -136,14 +136,14 @@ struct timsort {
 #endif
 };
 
-static int timsort_init (struct timsort *ts, void *a, size_t len,
-			 int (*c) (const void *, const void *, void *),
+static int timsort_init(struct timsort *ts, void *a, size_t len,
+			int (*c) (const void *, const void *, void *),
 			void *udata, size_t width);
-static void timsort_deinit (struct timsort *ts);
+static void timsort_deinit(struct timsort *ts);
 static size_t minRunLength(size_t n);
 static void pushRun(struct timsort *ts, void *runBase, size_t runLen);
-static void *ensureCapacity(struct timsort *ts, size_t minCapacity, size_t width);
-
+static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
+			    size_t width);
 
 /**
  * Creates a TimSort instance to maintain the state of an ongoing sort.
@@ -307,7 +307,8 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	assert(ts->stackSize < ts->stackLen);
 
-	ts->run[ts->stackSize++] = (struct timsort_run){ runBase, runLen };
+	ts->run[ts->stackSize++] = (struct timsort_run) {
+	runBase, runLen};
 }
 
 /**
@@ -318,7 +319,8 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
  * @param minCapacity the minimum required capacity of the tmp array
  * @return tmp, whether or not it grew
  */
-static void *ensureCapacity(struct timsort *ts, size_t minCapacity, size_t width)
+static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
+			    size_t width)
 {
 	void *tmp = ts->tmp;
 
@@ -349,7 +351,6 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity, size_t width
 	return tmp;
 }
 
-
 #define WIDTH 4
 #include "timsort-impl.h"
 #undef WIDTH
@@ -366,18 +367,16 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity, size_t width
 #include "timsort-impl.h"
 #undef WIDTH
 
-
-
 int timsort(void *a, size_t nel, size_t width,
 	    int (*c) (const void *, const void *, void *), void *udata)
 {
-	switch(width) {
+	switch (width) {
 	case 4:
 		return timsort_4(a, nel, width, c, udata);
 	case 8:
 		return timsort_8(a, nel, width, c, udata);
 	case 16:
-		return timsort_16(a, nel, width, c, udata);		
+		return timsort_16(a, nel, width, c, udata);
 	default:
 		return timsort_width(a, nel, width, c, udata);
 	}
