@@ -18,7 +18,7 @@
 #include <assert.h>		// assert
 #include <errno.h>		// EINVAL
 #include <stddef.h>		// size_t, NULL
-#include <stdlib.h>		// malloc, realloc, free
+#include <stdlib.h>		// malloc, free
 #include <string.h>		// memcpy, memmove
 #include "timsort.h"
 
@@ -322,8 +322,6 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 			    size_t width)
 {
-	void *tmp = ts->tmp;
-
 	if (ts->tmp_length < minCapacity) {
 		// Compute smallest power of 2 > minCapacity
 		size_t newSize = minCapacity;
@@ -341,14 +339,12 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 			newSize = minCapacity;
 		}
 
-		tmp = realloc(ts->tmp, newSize * width);
-		if (tmp) {
-			ts->tmp = tmp;
-			ts->tmp_length = newSize;
-		}
+		free(ts->tmp);
+		ts->tmp_length = newSize;
+		ts->tmp = malloc(ts->tmp_length * width);
 	}
 
-	return tmp;
+	return ts->tmp;
 }
 
 #define WIDTH 4
