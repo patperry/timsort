@@ -128,5 +128,14 @@ The rest of the changes allow for `size_t` to be up to 64-bits long:
 Related projects
 ================
 
-Christopher Swenson has a faster macro-based C implementation at
+Christopher Swenson has a faster macro-based C implementation of timsort at
 [https://github.com/swenson/sort/](https://github.com/swenson/sort/).
+
+
+Performance
+===========
+
+In a crude benchmark, sorting small, medium, and large arrays of
+uniformly chosen 64-bit integers, performance was comparable to the
+stdlib `qsort` implementation; Swenson's macro-based timsort
+implementation was about 1.4 times faster than both.
