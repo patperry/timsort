@@ -109,7 +109,7 @@ struct timsort {
 	 * to MIN_GALLOP.  The mergeLo and mergeHi methods nudge it higher for
 	 * random data, and lower for highly structured data.
 	 */
-	int minGallop;
+	size_t minGallop;
 
 	/**
 	 * Temp storage for merges.
