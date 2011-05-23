@@ -56,6 +56,6 @@
  * @author Patrick O. Perry
  */
 int timsort(void *base, size_t nel, size_t width,
-	    int (*compar) (const void *, const void *, void *), void *udata);
+	    int (*compar) (const void *, const void *));
 
 #endif /* _TIMSORT_H */

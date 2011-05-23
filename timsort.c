@@ -84,7 +84,7 @@
 #define NAME(x) MAKE_STR(x, WIDTH)
 #define CALL(x) NAME(x)
 
-typedef int (*comparator) (const void *x, const void *y, void *udata);
+typedef int (*comparator) (const void *x, const void *y);
 
 struct timsort_run {
 	void *base;
@@ -101,8 +101,7 @@ struct timsort {
 	/**
 	 * The comparator for this sort.
 	 */
-	int (*c) (const void *x, const void *y, void *udata);
-	void *udata;
+	int (*c) (const void *x, const void *y);
 
 	/**
 	 * This controls when we get *into* galloping mode.  It is initialized
@@ -137,8 +136,8 @@ struct timsort {
 };
 
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *, void *),
-			void *udata, size_t width);
+			int (*c) (const void *, const void *),
+			size_t width);
 static void timsort_deinit(struct timsort *ts);
 static size_t minRunLength(size_t n);
 static void pushRun(struct timsort *ts, void *runBase, size_t runLen);
@@ -151,12 +150,11 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
  * @param a the array to be sorted
  * @param nel the length of the array
  * @param c the comparator to determine the order of the sort
- * @param udata data pointer for the comparator
  * @param width the element width
  */
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *, void *),
-			void *udata, size_t width)
+			int (*c) (const void *, const void *),
+			size_t width)
 {
 	assert(ts);
 	assert(a || !len);
@@ -168,7 +166,6 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	ts->a = a;
 	ts->a_length = len;
 	ts->c = c;
-	ts->udata = udata;
 
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
@@ -364,16 +361,16 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #undef WIDTH
 
 int timsort(void *a, size_t nel, size_t width,
-	    int (*c) (const void *, const void *, void *), void *udata)
+	int (*c) (const void *, const void *))
 {
 	switch (width) {
 	case 4:
-		return timsort_4(a, nel, width, c, udata);
+		return timsort_4(a, nel, width, c);
 	case 8:
-		return timsort_8(a, nel, width, c, udata);
+		return timsort_8(a, nel, width, c);
 	case 16:
-		return timsort_16(a, nel, width, c, udata);
+		return timsort_16(a, nel, width, c);
 	default:
-		return timsort_width(a, nel, width, c, udata);
+		return timsort_width(a, nel, width, c);
 	}
 }

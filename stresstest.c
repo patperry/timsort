@@ -34,8 +34,8 @@
 
 /* Used to control the stress test */
 #define SEED 123
-#define MAXSIZE 25600
-#define TESTS 10000
+#define MAXSIZE 1000
+#define TESTS 100000
 #define TYPE int
 
 /* helper functions */
@@ -72,13 +72,6 @@ static inline int compare(const void *a, const void *b)
   return (da < db) ? -1 : (da == db) ? 0 : 1;
 }
 
-static inline int compare_udata(const void *a, const void *b, void *udata)
-{
-  const TYPE da = *((const TYPE *) a);
-  const TYPE db = *((const TYPE *) b);
-  return (da < db) ? -1 : (da == db) ? 0 : 1;
-}
-
 
 void run_tests(void)
 {
@@ -102,13 +95,13 @@ void run_tests(void)
 		}
 
 		fill(dst, size);
-		err = timsort(dst, size, sizeof(dst[0]), compare_udata, NULL);
+		err = timsort(dst, size, sizeof(dst[0]), compare);
 		if (err) {
 			perror("timsort failed");
 			exit(EXIT_FAILURE);
 		}
 		verify(dst, size);
-		err = timsort(dst, size, sizeof(dst[0]), compare_udata, NULL);
+		err = timsort(dst, size, sizeof(dst[0]), compare);
 		if (err) {
 			perror("timsort failed");
 			exit(EXIT_FAILURE);
@@ -117,8 +110,7 @@ void run_tests(void)
 		
 		free(dst);
 	} 
-#endif
-#if 0
+#else
 	printf("mergesort\n");
 	for (test = 0; test < TESTS; test++)
 	{

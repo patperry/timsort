@@ -7,13 +7,12 @@ by the initials POP.
 The prototype for the sorting function is
 
     int timsort(void *base, size_t nel, size_t width,
-                int (*compar) (const void *, const void *, void *), void *udata);
+                int (*compar) (const void *, const void *));
 
-This resembles the standard library `qsort` function, except that the
-comparator takes a third `udata` parameter, which is supplied by the
-client.  The function returns `0` on success and `-1` on failure.  Failure
-only happens when the routine can't allocate the necessary temporary array or
-if the comparator is invalid.
+This resembles the standard library `qsort` function.  The function
+returns `0` on success and `-1` on failure.  Failure only happens when
+the routine can't allocate the necessary temporary array or if the
+comparator is invalid.
 
 The C version uses a few C99 variable length arrays of size `width`; these
 could easily be replaced with calls to `alloca`.  The other utilized C99 features
