@@ -285,7 +285,6 @@ static void timsort_deinit(struct timsort *ts)
  */
 static size_t minRunLength(size_t n)
 {
-	assert(n >= 0);
 	size_t r = 0;		// Becomes 1 if any 1 bits are shifted off
 	while (n >= MIN_MERGE) {
 		r |= (n & 1);

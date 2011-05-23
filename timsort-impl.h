@@ -36,8 +36,6 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 static int NAME(timsort) (void *a, size_t nel, size_t width,
 			int (*c) (const void *, const void *)) {
 	assert(a || !nel || !width);
-	assert(nel >= 0);
-	assert(width >= 0);
 	assert(c);
 
 	int err = SUCCESS;
@@ -113,7 +111,7 @@ out:
  */
 static void NAME(binarySort) (void *a, size_t hi, size_t start,
 			      comparator compare, size_t width) {
-	assert(0 <= start && start <= hi);
+	assert(start <= hi);
 
 	DEFINE_TEMP(pivot);
 
@@ -304,7 +302,6 @@ static int NAME(mergeForceCollapse) (struct timsort * ts, size_t width) {
  */
 static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width) {
 	assert(ts->stackSize >= 2);
-	assert(i >= 0);
 	assert(i == ts->stackSize - 2 || i == ts->stackSize - 3);
 
 	void *base1 = ts->run[i].base;
@@ -330,7 +327,6 @@ static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width) {
 	 * in run1 can be ignored (because they're already in place).
 	 */
 	size_t k = CALL(gallopRight) (base2, base1, len1, 0, ts->c, width);
-	assert(k >= 0);
 	base1 = ELEM(base1, k);
 	len1 -= k;
 	if (len1 == 0)
@@ -343,7 +339,6 @@ static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width) {
 	len2 =
 	    CALL(gallopLeft) (ELEM(base1, len1 - 1), base2, len2, len2 - 1,
 			      ts->c, width);
-	assert(len2 >= 0);
 	if (len2 == 0)
 		return SUCCESS;
 
@@ -374,7 +369,7 @@ static int NAME(mergeAt) (struct timsort * ts, size_t i, size_t width) {
 static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
 				size_t hint, comparator compare,
 				size_t width) {
-	assert(len > 0 && hint >= 0 && hint < len);
+	assert(len > 0 && hint < len);
 	char *hintp = ELEM(base, hint);
 	size_t lastOfs = 0;
 	size_t ofs = 1;
@@ -409,7 +404,7 @@ static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
 		lastOfs = hint + 1 - ofs;	// POP: we add 1 here so lastOfs stays non-negative
 		ofs = hint - tmp;
 	}
-	assert(0 <= lastOfs && lastOfs <= ofs && ofs <= len);
+	assert(lastOfs <= ofs && ofs <= len);
 
 	/*
 	 * Now a[lastOfs-1] < key <= a[ofs], so key belongs somewhere
@@ -446,7 +441,7 @@ static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
 static size_t NAME(gallopRight) (void *key, void *base, size_t len,
 				 size_t hint, comparator compare,
 				 size_t width) {
-	assert(len > 0 && hint >= 0 && hint < len);
+	assert(len > 0 && hint < len);
 
 	char *hintp = ELEM(base, hint);
 	size_t ofs = 1;
@@ -482,7 +477,7 @@ static size_t NAME(gallopRight) (void *key, void *base, size_t len,
 		lastOfs += hint + 1;
 		ofs += hint;
 	}
-	assert(0 <= lastOfs && lastOfs <= ofs && ofs <= len);
+	assert(lastOfs <= ofs && ofs <= len);
 
 	/*
 	 * Now a[lastOfs - 1] <= key < a[ofs], so key belongs somewhere to
