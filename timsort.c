@@ -303,8 +303,8 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	assert(ts->stackSize < ts->stackLen);
 
-	ts->run[ts->stackSize++] = (struct timsort_run) {
-	runBase, runLen};
+	ts->run[ts->stackSize++].base = runBase;
+	ts->run[ts->stackSize++].len = runLen;
 }
 
 /**
@@ -355,9 +355,11 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #include "timsort-impl.h"
 #undef WIDTH
 
+#if ! defined(_MSC_VER)
 #define WIDTH width
 #include "timsort-impl.h"
 #undef WIDTH
+#endif
 
 int timsort(void *a, size_t nel, size_t width,
 	int (*c) (const void *, const void *))
@@ -370,6 +372,10 @@ int timsort(void *a, size_t nel, size_t width,
 	case 16:
 		return timsort_16(a, nel, width, c);
 	default:
-		return timsort_width(a, nel, width, c);
+#if defined(_MSC_VER)
+            return -1;
+#else
+            return timsort_width(a, nel, width, c);
+#endif
 	}
 }
