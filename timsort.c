@@ -57,6 +57,21 @@
 #define INITIAL_TMP_STORAGE_LENGTH 256
 
 /**
+ * Memory allocation routines to use.
+ */
+#ifdef TIMSORT_MALLOC
+# ifndef TIMSORT_FREE
+#  error You must define TIMSORT_FREE if you define TIMSORT_MALLOC
+# endif
+#else
+# ifdef TIMSORT_FREE
+#  error You must define TIMSORT_MALLOC if you define TIMSORT_FREE
+# endif
+# define TIMSORT_MALLOC(x) malloc(x)
+# define TIMSORT_FREE(x)   free(x)
+#endif
+
+/**
  * Maximum stack size.  This depends on MIN_MERGE and sizeof(size_t).
  */
 #define MAX_STACK 85
@@ -188,7 +203,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
 			  len >> 1 : INITIAL_TMP_STORAGE_LENGTH);
-	ts->tmp = malloc(ts->tmp_length * width);
+	ts->tmp = TIMSORT_MALLOC(ts->tmp_length * width);
 
 	/*
 	 * Allocate runs-to-be-merged stack (which cannot be expanded).  The
@@ -263,7 +278,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 */
 	//stackLen = (len < 120 ? 5 : len < 1542 ? 10 : len < 119151 ? 19 : 40);
 
-	ts->run = malloc(ts->stackLen * sizeof(ts->run[0]));
+	ts->run = TIMSORT_MALLOC(ts->stackLen * sizeof(ts->run[0]));
 #else
 	ts->stackLen = MAX_STACK;
 #endif
@@ -278,9 +293,9 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 
 static void timsort_deinit(struct timsort *ts)
 {
-	free(ts->tmp);
+	TIMSORT_FREE(ts->tmp);
 #ifdef MALLOC_STACK
-	free(ts->run);
+	TIMSORT_FREE(ts->run);
 #endif
 }
 
@@ -354,9 +369,9 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 			newSize = minCapacity;
 		}
 
-		free(ts->tmp);
+		TIMSORT_FREE(ts->tmp);
 		ts->tmp_length = newSize;
-		ts->tmp = malloc(ts->tmp_length * width);
+		ts->tmp = TIMSORT_MALLOC(ts->tmp_length * width);
 	}
 
 	return ts->tmp;
