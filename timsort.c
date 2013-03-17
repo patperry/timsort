@@ -84,11 +84,16 @@
 #define NAME(x) MAKE_STR(x, WIDTH)
 #define CALL(x) NAME(x)
 
+
 #ifdef USE_CMP_ARG
-typedef int (*comparator) (const void *x, const void *y, void *arg);
+/*
+ * Note order of elements to comparator matches that of BSD qsort_r, not
+ * GNU qsort_t
+ */
+typedef int (*comparator) (void *arg, const void *x, const void *y);
 #define CMPPARAMS(fn, fnarg) comparator fn, void *fnarg
 #define CMPARGS(fn, fnarg) fn, fnarg
-#define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b, fnarg))
+#define CMP(fn, fnarg, op_a, op_b) (fn(fnarg, op_a, op_b))
 #define TIMSORT timsort_arg
 #else
 typedef int (*comparator) (const void *x, const void *y);
