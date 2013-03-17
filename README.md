@@ -145,7 +145,7 @@ implementation was about 1.4 times faster than both.  Swenson's
 implementation has the edge here because it avoids the overhead
 of a function call when comparing two elements.
 
-Changs in this fork
+Changes in this fork
 ===================
 
 This fork has two primary differences from Pat Perry's original implementation
