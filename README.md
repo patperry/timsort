@@ -165,4 +165,10 @@ timsort_arg
 A variation of the timsort() function - timsort_arg() - has been defined
 which can pass an additional argument to the comparison function
 purely for the calling application's own use. This is similar to the
-qsort_r variation of the standard qsort function.
+qsort_r variation of the standard qsort function. 
+
+To build this variation, pass /DUSE_CMP_ARG to the compiler.
+
+Functions timsort and timsort_arg may be simultaneously included in a program.
+Just build two object files from timsort.c, one with /DUSE_CMP_ARG and
+one without.
