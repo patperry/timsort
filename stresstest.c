@@ -29,8 +29,11 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
 #include "timsort.h"
+
+#ifdef _WIN32
+#define lrand48 rand
+#endif
 
 /* Used to control the stress test */
 #define SEED 123
@@ -64,8 +67,14 @@ static void fill(TYPE *dst, const size_t size)
   }
 }
 
-/* used for stdlib */
-static inline int compare(const void *a, const void *b)
+static int compare(const void *a, const void *b)
+{
+  const TYPE da = *((const TYPE *) a);
+  const TYPE db = *((const TYPE *) b);
+  return (da < db) ? -1 : (da == db) ? 0 : 1;
+}
+
+static int compare_arg(const void *a, const void *b, void *arg)
 {
   const TYPE da = *((const TYPE *) a);
   const TYPE db = *((const TYPE *) b);
@@ -81,7 +90,9 @@ void run_tests(void)
 	size_t size;
 	
 	printf("Running tests\n");
+#ifndef _WIN32
 	srand48(SEED);
+#endif
 
 #if 1
 	printf("timsort\n");
@@ -95,13 +106,21 @@ void run_tests(void)
 		}
 
 		fill(dst, size);
+#ifdef USE_CMP_ARG
+		err = timsort_arg(dst, size, sizeof(dst[0]), compare_arg, NULL);
+#else
 		err = timsort(dst, size, sizeof(dst[0]), compare);
+#endif
 		if (err) {
 			perror("timsort failed");
 			exit(EXIT_FAILURE);
 		}
 		verify(dst, size);
+#ifdef USE_CMP_ARG
+		err = timsort_arg(dst, size, sizeof(dst[0]), compare_arg, NULL);
+#else
 		err = timsort(dst, size, sizeof(dst[0]), compare);
+#endif
 		if (err) {
 			perror("timsort failed");
 			exit(EXIT_FAILURE);

@@ -84,7 +84,19 @@
 #define NAME(x) MAKE_STR(x, WIDTH)
 #define CALL(x) NAME(x)
 
+#ifdef USE_CMP_ARG
+typedef int (*comparator) (const void *x, const void *y, void *arg);
+#define CMPPARAMS(fn, fnarg) comparator fn, void *fnarg
+#define CMPARGS(fn, fnarg) fn, fnarg
+#define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b, fnarg))
+#define TIMSORT timsort_arg
+#else
 typedef int (*comparator) (const void *x, const void *y);
+#define CMPPARAMS(fn, fnarg) comparator fn
+#define CMPARGS(fn, fnarg) fn
+#define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b))
+#define TIMSORT timsort
+#endif
 
 struct timsort_run {
 	void *base;
@@ -97,11 +109,14 @@ struct timsort {
 	 */
 	void *a;
 	size_t a_length;
-
+	
 	/**
 	 * The comparator for this sort.
 	 */
-	int (*c) (const void *x, const void *y);
+	comparator c;
+#ifdef USE_CMP_ARG
+	void *carg;
+#endif
 
 	/**
 	 * This controls when we get *into* galloping mode.  It is initialized
@@ -136,7 +151,7 @@ struct timsort {
 };
 
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *),
+			CMPPARAMS(c, carg),
 			size_t width);
 static void timsort_deinit(struct timsort *ts);
 static size_t minRunLength(size_t n);
@@ -153,7 +168,7 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
  * @param width the element width
  */
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *),
+			CMPPARAMS(c, carg),
 			size_t width)
 {
 	assert(ts);
@@ -166,6 +181,9 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	ts->a = a;
 	ts->a_length = len;
 	ts->c = c;
+#ifdef USE_CMP_ARG
+	ts->carg = carg;
+#endif
 
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
@@ -303,8 +321,9 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	assert(ts->stackSize < ts->stackLen);
 
-	ts->run[ts->stackSize++].base = runBase;
-	ts->run[ts->stackSize++].len = runLen;
+	ts->run[ts->stackSize].base = runBase;
+	ts->run[ts->stackSize].len = runLen;
+	ts->stackSize++;
 }
 
 /**
@@ -361,21 +380,20 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #undef WIDTH
 #endif
 
-int timsort(void *a, size_t nel, size_t width,
-	int (*c) (const void *, const void *))
+int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 {
 	switch (width) {
 	case 4:
-		return timsort_4(a, nel, width, c);
+		return timsort_4(a, nel, width, CMPARGS(c, carg));
 	case 8:
-		return timsort_8(a, nel, width, c);
+		return timsort_8(a, nel, width, CMPARGS(c, carg));
 	case 16:
-		return timsort_16(a, nel, width, c);
+		return timsort_16(a, nel, width, CMPARGS(c, carg));
 	default:
 #if defined(_MSC_VER)
-            return -1;
+		return -1;
 #else
-            return timsort_width(a, nel, width, c);
+		return timsort_width(a, nel, width, CMPARGS(c, carg));
 #endif
 	}
 }
