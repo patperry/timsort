@@ -14,6 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/*
+ * Visual C++ does not support arrays with runtime size. See end of this
+ * file for how and when MAX_WIDTH is defined.
+ */
+#undef TEMP_STORAGE /* To allow multiple includs with different configs */
+#ifdef MAX_WIDTH
+#define TEMP_STORAGE(temp) char temp[MAX_WIDTH]
+#else
+#define TEMP_STORAGE(temp) char temp[WIDTH]
+#endif
+
 
 static void NAME(binarySort) (void *a, size_t hi, size_t start,
 			      CMPPARAMS(compare, carg), size_t width);

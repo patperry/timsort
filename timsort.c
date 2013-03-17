@@ -68,7 +68,7 @@
  */
 /* #undef MALLOC_STACK */
 
-#define DEFINE_TEMP(temp) char temp[WIDTH]
+#define DEFINE_TEMP(temp) TEMP_STORAGE(temp)
 #define ASSIGN(x, y) memcpy(x, y, WIDTH)
 #define INCPTR(x) ((void *)((char *)(x) + WIDTH))
 #define DECPTR(x) ((void *)((char *)(x) - WIDTH))
@@ -374,11 +374,12 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #include "timsort-impl.h"
 #undef WIDTH
 
-#if ! defined(_MSC_VER)
+#ifdef _MSC_VER
+#define MAX_WIDTH 256
+#endif
 #define WIDTH width
 #include "timsort-impl.h"
 #undef WIDTH
-#endif
 
 int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 {
@@ -390,10 +391,10 @@ int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 	case 16:
 		return timsort_16(a, nel, width, CMPARGS(c, carg));
 	default:
-#if defined(_MSC_VER)
-		return -1;
-#else
-		return timsort_width(a, nel, width, CMPARGS(c, carg));
+#ifdef MAX_WIDTH
+		if (width > MAX_WIDTH)
+			return -1;
 #endif
+		return timsort_width(a, nel, width, CMPARGS(c, carg));
 	}
 }
