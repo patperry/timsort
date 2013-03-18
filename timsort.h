@@ -58,7 +58,7 @@
 int timsort(void *base, size_t nel, size_t width,
 	    int (*compar) (const void *, const void *));
 
-int timsort_arg(void *base, size_t nel, size_t width,
-                int (*compar) (void *context, const void *, const void *), void *carg);
+int timsort_r(void *base, size_t nel, size_t width,
+                int (*compar) (void *context, const void *, const void *), void *context);
 
 #endif /* _TIMSORT_H */
