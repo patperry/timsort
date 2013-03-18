@@ -159,16 +159,24 @@ Most changes are those described above in the original README. However,
 instead of using alloca, a MAX_WIDTH #define controls maximum size
 of elements allowed.
 
-timsort_arg
+timsort_r
 -----------
 
-A variation of the timsort() function - timsort_arg() - has been defined
+A variation of the timsort() function - timsort_r() - has been defined
 which can pass an additional argument to the comparison function
 purely for the calling application's own use. This is similar to the
-qsort_r variation of the standard qsort function. 
+BSD (*not* GNU) qsort_r variation of the standard qsort function. 
 
-To build this variation, pass /DUSE_CMP_ARG to the compiler.
+The prototype for this sorting function is
 
-Functions timsort and timsort_arg may be simultaneously included in a program.
+    int timsort_r(void *base, size_t nel, size_t width,
+                int (*compar) (void *context, const void *, const void *), 
+		void *context);
+
+The additional context parameter is passed to the comparison callback
+as the first argument. To build this variation, pass /DUSE_CMP_ARG 
+to the compiler.
+
+Functions timsort and timsort_r may be simultaneously included in a program.
 Just build two object files from timsort.c, one with /DUSE_CMP_ARG and
 one without.

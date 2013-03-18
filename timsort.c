@@ -109,14 +109,17 @@ typedef int (*comparator) (void *arg, const void *x, const void *y);
 #define CMPPARAMS(fn, fnarg) comparator fn, void *fnarg
 #define CMPARGS(fn, fnarg) fn, fnarg
 #define CMP(fn, fnarg, op_a, op_b) (fn(fnarg, op_a, op_b))
-#define TIMSORT timsort_arg
+#define TIMSORT timsort_r
+
 #else
+
 typedef int (*comparator) (const void *x, const void *y);
 #define CMPPARAMS(fn, fnarg) comparator fn
 #define CMPARGS(fn, fnarg) fn
 #define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b))
 #define TIMSORT timsort
-#endif
+
+#endif /* USE_CMP_ARG */
 
 struct timsort_run {
 	void *base;
