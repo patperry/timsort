@@ -140,3 +140,26 @@ stdlib `qsort` implementation; Swenson's macro-based timsort
 implementation was about 1.4 times faster than both.  Swenson's
 implementation has the edge here because it avoids the overhead
 of a function call when comparing two elements.
+
+
+Reentrant verion
+================
+
+A variation of the timsort() function - timsort_r() - has been defined
+which can pass an additional argument to the comparison function
+purely for the calling application's own use. This is similar to the
+BSD (*not* GNU) qsort_r variation of the standard qsort function. 
+
+The prototype for this sorting function is
+
+    int timsort_r(void *base, size_t nel, size_t width,
+                int (*compar) (void *context, const void *, const void *), 
+		void *context);
+
+The additional context parameter is passed to the comparison callback
+as the first argument. To build this variation, pass /DUSE_CMP_ARG 
+to the compiler.
+
+Functions timsort and timsort_r may be simultaneously included in a program.
+Just build two object files from timsort.c, one with /DUSE_CMP_ARG and
+one without.
