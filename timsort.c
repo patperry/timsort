@@ -84,7 +84,12 @@
 /* #undef MALLOC_STACK */
 
 #define DEFINE_TEMP(temp) TEMP_STORAGE(temp)
-#define ASSIGN(x, y) memcpy(x, y, WIDTH)
+#define ASSIGN(x, y) do { \
+        /* assert that memcpy is safe */                                \
+        assert((y) > (x) || (y) <= ((void*)((char*)(x) - WIDTH)));      \
+        memcpy(x, y, WIDTH);                                            \
+    } while (0);
+
 #define INCPTR(x) ((void *)((char *)(x) + WIDTH))
 #define DECPTR(x) ((void *)((char *)(x) - WIDTH))
 #define ELEM(a,i) ((char *)(a) + (i) * WIDTH)

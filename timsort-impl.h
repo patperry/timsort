@@ -553,6 +553,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 		return FAILURE;
 
 	// System.arraycopy(a, base1, tmp, 0, len1);
+        // tmp obviously non-overlapping with base1 so memcpy is safe to use
 	memcpy(tmp, base1, LEN(len1));
 
 	cursor1 = tmp;		// Indexes into tmp array
@@ -566,11 +567,14 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 	cursor2 = INCPTR(cursor2);
 
 	if (--len2 == 0) {
+		// cursor1 -> into tmp, dest -> into base1 so no overlap, 
+		// memcpy safe
 		memcpy(dest, cursor1, LEN(len1));
 		return SUCCESS;
 	}
 	if (len1 == 1) {
-		memcpy(dest, cursor2, LEN(len2));
+		// Potentially overlapping src/dest so use memmove
+		memmove(dest, cursor2, LEN(len2));
 
 		// a[dest + len2] = tmp[cursor1]; // Last elt of run 1 to end of merge
 		ASSIGN(ELEM(dest, len2), cursor1);
@@ -627,7 +631,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 			    CALL(gallopRight) (cursor2, cursor1, len1, 0,
 					       CMPARGS(compare, carg), width);
 			if (count1 != 0) {
-				memcpy(dest, cursor1, LEN(count1));
+				memmove(dest, cursor1, LEN(count1));
 				dest = ELEM(dest, count1);
 				cursor1 = ELEM(cursor1, count1);
 				len1 -= count1;
@@ -644,7 +648,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 			    CALL(gallopLeft) (cursor1, cursor2, len2, 0,
 					      CMPARGS(compare, carg), width);
 			if (count2 != 0) {
-				memcpy(dest, cursor2, LEN(count2));
+				memmove(dest, cursor2, LEN(count2));
 				dest = ELEM(dest, count2);
 				cursor2 = ELEM(cursor2, count2);
 				len2 -= count2;
@@ -666,7 +670,7 @@ outer:
 
 	if (len1 == 1) {
 		assert(len2 > 0);
-		memcpy(dest, cursor2, LEN(len2));
+		memmove(dest, cursor2, LEN(len2));
 		ASSIGN(ELEM(dest, len2), cursor1);	//  Last elt of run 1 to end of merge
 
 	} else if (len1 == 0) {
@@ -675,7 +679,7 @@ outer:
 	} else {
 		assert(len2 == 0);
 		assert(len1 > 1);
-		memcpy(dest, cursor1, LEN(len1));
+		memmove(dest, cursor1, LEN(len1));
 	}
 	return SUCCESS;
 }
@@ -709,6 +713,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	if (!tmp)
 		return FAILURE;
 
+	// memcpy ok since tmp and base2 cannot overlap
 	memcpy(tmp, base2, LEN(len2));
 
 	cursor1 = ELEM(base1, len1 - 1);// Indexes into a
@@ -721,13 +726,13 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	dest = DECPTR(dest);
 	cursor1 = DECPTR(cursor1);
 	if (--len1 == 0) {
-		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
+		memmove(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
 		return SUCCESS;
 	}
 	if (len2 == 1) {
 		dest = ELEM(dest, -len1);
 		cursor1 = ELEM(cursor1, -len1);
-		memcpy(ELEM(dest, 1), ELEM(cursor1, 1), LEN(len1));
+		memmove(ELEM(dest, 1), ELEM(cursor1, 1), LEN(len1));
 		// a[dest] = tmp[cursor2];
 		ASSIGN(dest, cursor2);
 		return SUCCESS;
@@ -784,7 +789,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 				dest = ELEM(dest, -count1);
 				cursor1 = ELEM(cursor1, -count1);
 				len1 -= count1;
-				memcpy(INCPTR(dest), INCPTR(cursor1),
+				memmove(INCPTR(dest), INCPTR(cursor1),
 				       LEN(count1));
 				if (len1 == 0)
 					goto outer;
@@ -803,7 +808,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 				dest = ELEM(dest, -count2);
 				cursor2 = ELEM(cursor2, -count2);
 				len2 -= count2;
-				memcpy(INCPTR(dest),
+				memmove(INCPTR(dest),
 				       INCPTR(cursor2), LEN(count2));
 				if (len2 <= 1)	// len2 == 1 || len2 == 0
 					goto outer;
@@ -825,7 +830,7 @@ outer:
 		assert(len1 > 0);
 		dest = ELEM(dest, -len1);
 		cursor1 = ELEM(cursor1, -len1);
-		memcpy(INCPTR(dest), INCPTR(cursor1), LEN(len1));
+		memmove(INCPTR(dest), INCPTR(cursor1), LEN(len1));
 		// a[dest] = tmp[cursor2];  // Move first elt of run2 to front of merge
 		ASSIGN(dest, cursor2);
 	} else if (len2 == 0) {
@@ -834,7 +839,7 @@ outer:
 	} else {
 		assert(len1 == 0);
 		assert(len2 > 0);
-		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
+		memmove(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
 	}
 
 	return SUCCESS;
