@@ -57,6 +57,21 @@
 #define INITIAL_TMP_STORAGE_LENGTH 256
 
 /**
+ * Memory allocation routines to use.
+ */
+#ifdef TIMSORT_MALLOC
+# ifndef TIMSORT_FREE
+#  error You must define TIMSORT_FREE if you define TIMSORT_MALLOC
+# endif
+#else
+# ifdef TIMSORT_FREE
+#  error You must define TIMSORT_MALLOC if you define TIMSORT_FREE
+# endif
+# define TIMSORT_MALLOC(x) malloc(x)
+# define TIMSORT_FREE(x)   free(x)
+#endif
+
+/**
  * Maximum stack size.  This depends on MIN_MERGE and sizeof(size_t).
  */
 #define MAX_STACK 85
@@ -68,8 +83,13 @@
  */
 /* #undef MALLOC_STACK */
 
-#define DEFINE_TEMP(temp) char temp[WIDTH]
-#define ASSIGN(x, y) memcpy(x, y, WIDTH)
+#define DEFINE_TEMP(temp) TEMP_STORAGE(temp)
+#define ASSIGN(x, y) do { \
+        /* assert that memcpy is safe */                                \
+        assert((y) > (x) || (y) <= ((void*)((char*)(x) - WIDTH)));      \
+        memcpy(x, y, WIDTH);                                            \
+    } while (0);
+
 #define INCPTR(x) ((void *)((char *)(x) + WIDTH))
 #define DECPTR(x) ((void *)((char *)(x) - WIDTH))
 #define ELEM(a,i) ((char *)(a) + (i) * WIDTH)
@@ -84,7 +104,27 @@
 #define NAME(x) MAKE_STR(x, WIDTH)
 #define CALL(x) NAME(x)
 
+
+#ifdef USE_CMP_ARG
+/*
+ * Note order of elements to comparator matches that of BSD qsort_r, not
+ * GNU qsort_t
+ */
+typedef int (*comparator) (void *arg, const void *x, const void *y);
+#define CMPPARAMS(fn, fnarg) comparator fn, void *fnarg
+#define CMPARGS(fn, fnarg) fn, fnarg
+#define CMP(fn, fnarg, op_a, op_b) (fn(fnarg, op_a, op_b))
+#define TIMSORT timsort_r
+
+#else
+
 typedef int (*comparator) (const void *x, const void *y);
+#define CMPPARAMS(fn, fnarg) comparator fn
+#define CMPARGS(fn, fnarg) fn
+#define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b))
+#define TIMSORT timsort
+
+#endif /* USE_CMP_ARG */
 
 struct timsort_run {
 	void *base;
@@ -97,11 +137,14 @@ struct timsort {
 	 */
 	void *a;
 	size_t a_length;
-
+	
 	/**
 	 * The comparator for this sort.
 	 */
-	int (*c) (const void *x, const void *y);
+	comparator c;
+#ifdef USE_CMP_ARG
+	void *carg;
+#endif
 
 	/**
 	 * This controls when we get *into* galloping mode.  It is initialized
@@ -136,7 +179,7 @@ struct timsort {
 };
 
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *),
+			CMPPARAMS(c, carg),
 			size_t width);
 static void timsort_deinit(struct timsort *ts);
 static size_t minRunLength(size_t n);
@@ -153,7 +196,7 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
  * @param width the element width
  */
 static int timsort_init(struct timsort *ts, void *a, size_t len,
-			int (*c) (const void *, const void *),
+			CMPPARAMS(c, carg),
 			size_t width)
 {
 	assert(ts);
@@ -166,11 +209,14 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	ts->a = a;
 	ts->a_length = len;
 	ts->c = c;
+#ifdef USE_CMP_ARG
+	ts->carg = carg;
+#endif
 
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
 			  len >> 1 : INITIAL_TMP_STORAGE_LENGTH);
-	ts->tmp = malloc(ts->tmp_length * width);
+	ts->tmp = TIMSORT_MALLOC(ts->tmp_length * width);
 
 	/*
 	 * Allocate runs-to-be-merged stack (which cannot be expanded).  The
@@ -245,7 +291,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	 */
 	//stackLen = (len < 120 ? 5 : len < 1542 ? 10 : len < 119151 ? 19 : 40);
 
-	ts->run = malloc(ts->stackLen * sizeof(ts->run[0]));
+	ts->run = TIMSORT_MALLOC(ts->stackLen * sizeof(ts->run[0]));
 #else
 	ts->stackLen = MAX_STACK;
 #endif
@@ -260,9 +306,9 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 
 static void timsort_deinit(struct timsort *ts)
 {
-	free(ts->tmp);
+	TIMSORT_FREE(ts->tmp);
 #ifdef MALLOC_STACK
-	free(ts->run);
+	TIMSORT_FREE(ts->run);
 #endif
 }
 
@@ -303,8 +349,9 @@ static void pushRun(struct timsort *ts, void *runBase, size_t runLen)
 {
 	assert(ts->stackSize < ts->stackLen);
 
-	ts->run[ts->stackSize++] = (struct timsort_run) {
-	runBase, runLen};
+	ts->run[ts->stackSize].base = runBase;
+	ts->run[ts->stackSize].len = runLen;
+	ts->stackSize++;
 }
 
 /**
@@ -335,9 +382,9 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 			newSize = minCapacity;
 		}
 
-		free(ts->tmp);
+		TIMSORT_FREE(ts->tmp);
 		ts->tmp_length = newSize;
-		ts->tmp = malloc(ts->tmp_length * width);
+		ts->tmp = TIMSORT_MALLOC(ts->tmp_length * width);
 	}
 
 	return ts->tmp;
@@ -355,21 +402,27 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #include "timsort-impl.h"
 #undef WIDTH
 
+#ifdef _MSC_VER
+#define MAX_WIDTH 256
+#endif
 #define WIDTH width
 #include "timsort-impl.h"
 #undef WIDTH
 
-int timsort(void *a, size_t nel, size_t width,
-	int (*c) (const void *, const void *))
+int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 {
 	switch (width) {
 	case 4:
-		return timsort_4(a, nel, width, c);
+		return timsort_4(a, nel, width, CMPARGS(c, carg));
 	case 8:
-		return timsort_8(a, nel, width, c);
+		return timsort_8(a, nel, width, CMPARGS(c, carg));
 	case 16:
-		return timsort_16(a, nel, width, c);
+		return timsort_16(a, nel, width, CMPARGS(c, carg));
 	default:
-		return timsort_width(a, nel, width, c);
+#ifdef MAX_WIDTH
+		if (width > MAX_WIDTH)
+			return -1;
+#endif
+		return timsort_width(a, nel, width, CMPARGS(c, carg));
 	}
 }

@@ -1,3 +1,7 @@
+This is a fork of [Pat Perry's timsort](https://github.com/patperry/timsort)
+C implementation. Please see the end of this README for the changes in
+this fork. - Ashok P. Nadkarni
+
 This is a fairly straightforward C99 port of the Java/Android
 implementation of [Timsort](http://en.wikipedia.org/wiki/Timsort), which
 itself is a port of Tim Peters's list sort for Python.  Most of the
@@ -140,3 +144,39 @@ stdlib `qsort` implementation; Swenson's macro-based timsort
 implementation was about 1.4 times faster than both.  Swenson's
 implementation has the edge here because it avoids the overhead
 of a function call when comparing two elements.
+
+Changes in this fork
+===================
+
+This fork has two primary differences from Pat Perry's original implementation
+but should be backward compatible.
+
+Visual C++ / C90 compatibility
+------------------------------
+
+The source has been changed so that it can be compiled with Visual C++.
+Most changes are those described above in the original README. However,
+instead of using alloca, a MAX_WIDTH #define controls maximum size
+of elements allowed.
+
+timsort_r
+-----------
+
+A variation of the timsort() function - timsort_r() - has been defined
+which can pass an additional argument to the comparison function
+purely for the calling application's own use. This is similar to the
+BSD (*not* GNU) qsort_r variation of the standard qsort function. 
+
+The prototype for this sorting function is
+
+    int timsort_r(void *base, size_t nel, size_t width,
+                int (*compar) (void *context, const void *, const void *), 
+		void *context);
+
+The additional context parameter is passed to the comparison callback
+as the first argument. To build this variation, pass /DUSE_CMP_ARG 
+to the compiler.
+
+Functions timsort and timsort_r may be simultaneously included in a program.
+Just build two object files from timsort.c, one with /DUSE_CMP_ARG and
+one without.
