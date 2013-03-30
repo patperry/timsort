@@ -17,6 +17,9 @@
 
 #include <assert.h>		// assert
 #include <errno.h>		// EINVAL
+#if defined(_MSC_VER)
+# include <malloc.h>		// _alloca
+#endif
 #include <stddef.h>		// size_t, NULL
 #include <stdlib.h>		// malloc, free
 #include <string.h>		// memcpy, memmove
@@ -68,7 +71,12 @@
  */
 /* #undef MALLOC_STACK */
 
-#define DEFINE_TEMP(temp) char temp[WIDTH]
+#if defined(_MSC_VER)
+# define DEFINE_TEMP(temp) void *temp = _alloca(WIDTH)
+#else
+# define DEFINE_TEMP(temp) char temp[WIDTH]
+#endif
+
 #define ASSIGN(x, y) memcpy(x, y, WIDTH)
 #define INCPTR(x) ((void *)((char *)(x) + WIDTH))
 #define DECPTR(x) ((void *)((char *)(x) - WIDTH))
@@ -382,11 +390,10 @@ static void *ensureCapacity(struct timsort *ts, size_t minCapacity,
 #include "timsort-impl.h"
 #undef WIDTH
 
-#if ! defined(_MSC_VER)
 #define WIDTH width
 #include "timsort-impl.h"
 #undef WIDTH
-#endif
+
 
 int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 {
@@ -398,10 +405,6 @@ int TIMSORT(void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 	case 16:
 		return timsort_16(a, nel, width, CMPARGS(c, carg));
 	default:
-#if defined(_MSC_VER)
-		return -1;
-#else
 		return timsort_width(a, nel, width, CMPARGS(c, carg));
-#endif
 	}
 }
