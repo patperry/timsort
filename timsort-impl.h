@@ -34,7 +34,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 			  void *base2, size_t len2, size_t width);
 static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 			  void *base2, size_t len2, size_t width);
-			 
+
 static int NAME(timsort) (void *a, size_t nel, size_t width, CMPPARAMS(c, carg))
 {
 	int err = SUCCESS;

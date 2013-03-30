@@ -88,7 +88,7 @@ void run_tests(void)
 	int test;
 	TYPE *dst;
 	size_t size;
-	
+
 	printf("Running tests\n");
 #ifndef _WIN32
 	srand48(SEED);
@@ -126,9 +126,9 @@ void run_tests(void)
 			exit(EXIT_FAILURE);
 		}
 		verify(dst, size);
-		
+
 		free(dst);
-	} 
+	}
 #else
 	printf("mergesort\n");
 	for (test = 0; test < TESTS; test++)

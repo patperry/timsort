@@ -125,7 +125,7 @@ struct timsort {
 	 */
 	void *a;
 	size_t a_length;
-	
+
 	/**
 	 * The comparator for this sort.
 	 */
