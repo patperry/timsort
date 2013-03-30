@@ -85,7 +85,7 @@
 #define CALL(x) NAME(x)
 
 
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 /*
  * Note order of elements to comparator matches that of BSD qsort_r, not
  * GNU qsort_t
@@ -104,7 +104,7 @@ typedef int (*comparator) (const void *x, const void *y);
 #define CMP(compar, thunk, x, y) (compar((x), (y)))
 #define TIMSORT timsort
 
-#endif /* USE_CMP_ARG */
+#endif /* IS_TIMSORT_R */
 
 struct timsort_run {
 	void *base;
@@ -122,7 +122,7 @@ struct timsort {
 	 * The comparator for this sort.
 	 */
 	comparator c;
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	void *carg;
 #endif
 
@@ -189,7 +189,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	ts->a = a;
 	ts->a_length = len;
 	ts->c = c;
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	ts->carg = carg;
 #endif
 

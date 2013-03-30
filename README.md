@@ -156,9 +156,4 @@ The prototype for this sorting function is
                 int (*compar) (void *thunk, const void *, const void *));
 
 The additional context parameter is passed to the comparison callback
-as the first argument. To build this variation, pass /DUSE_CMP_ARG 
-to the compiler.
-
-Functions `timsort` and `timsort_r` may be simultaneously included in a
-program.  Just build two object files from timsort.c, one with /DUSE_CMP_ARG
-and one without.
+as the first argument.

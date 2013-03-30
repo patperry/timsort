@@ -532,7 +532,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 	char *cursor2;
 	char *dest;
 	comparator compare;	// Use local variable for performance
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	void *carg;		// Use local variable for performance
 #endif
 	size_t minGallop;	//  "    "       "     "      "
@@ -567,7 +567,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 	}
 
 	compare = ts->c;	// Use local variable for performance
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	carg = ts->carg;	// Use local variable for performance
 #endif
 	minGallop = ts->minGallop;	//  "    "       "     "      "
@@ -689,7 +689,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	char *cursor2;	// Indexes into tmp array
 	char *dest;	// Indexes into a
 	comparator compare;	// Use local variable for performance
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	void *carg;		//  "    "       "     "      "
 #endif
 	size_t minGallop;	//  "    "       "     "      "
@@ -723,7 +723,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	}
 
 	compare = ts->c;		// Use local variable for performance
-#ifdef USE_CMP_ARG
+#ifdef IS_TIMSORT_R
 	carg = ts->carg;		// Use local variable for performance
 #endif
 	minGallop = ts->minGallop;	//  "    "       "     "      "
