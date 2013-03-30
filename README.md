@@ -14,11 +14,6 @@ returns `0` on success and `-1` on failure.  Failure only happens when
 the routine can't allocate the necessary temporary array or if the
 comparator is invalid.
 
-The C version uses a few C99 variable length arrays of size `width`; these
-could easily be replaced with calls to `alloca`.  The other utilized C99 features
-are mixed code and declarations, and `//` comments.  It would be fairly easy to
-port the code to C90.
-
 The source code for the (Apache 2.0 Licensed) Java version is included in
 [the JSR-166 proposal](http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/TimSort.java?view=co).
 
