@@ -90,18 +90,18 @@
  * Note order of elements to comparator matches that of BSD qsort_r, not
  * GNU qsort_t
  */
-typedef int (*comparator) (void *arg, const void *x, const void *y);
-#define CMPPARAMS(fn, fnarg) comparator fn, void *fnarg
-#define CMPARGS(fn, fnarg) fn, fnarg
-#define CMP(fn, fnarg, op_a, op_b) (fn(fnarg, op_a, op_b))
+typedef int (*comparator) (void *thunk, const void *x, const void *y);
+#define CMPPARAMS(compar, thunk) void *thunk, comparator compar
+#define CMPARGS(compar, thunk) (thunk), (compar)
+#define CMP(compar, thunk, x, y) (compar((thunk), (x), (y)))
 #define TIMSORT timsort_r
 
 #else
 
 typedef int (*comparator) (const void *x, const void *y);
-#define CMPPARAMS(fn, fnarg) comparator fn
-#define CMPARGS(fn, fnarg) fn
-#define CMP(fn, fnarg, op_a, op_b) (fn(op_a, op_b))
+#define CMPPARAMS(compar, thunk) comparator compar
+#define CMPARGS(compar, thunk) (compar)
+#define CMP(compar, thunk, x, y) (compar((x), (y)))
 #define TIMSORT timsort
 
 #endif /* USE_CMP_ARG */

@@ -74,7 +74,7 @@ static int compare(const void *a, const void *b)
   return (da < db) ? -1 : (da == db) ? 0 : 1;
 }
 
-static int compare_arg(const void *a, const void *b, void *arg)
+static int compare_arg(void *arg, const void *a, const void *b)
 {
   const TYPE da = *((const TYPE *) a);
   const TYPE db = *((const TYPE *) b);
@@ -107,7 +107,7 @@ void run_tests(void)
 
 		fill(dst, size);
 #ifdef USE_CMP_ARG
-		err = timsort_arg(dst, size, sizeof(dst[0]), compare_arg, NULL);
+		err = timsort_r(dst, size, sizeof(dst[0]), NULL, compare_arg);
 #else
 		err = timsort(dst, size, sizeof(dst[0]), compare);
 #endif
@@ -117,7 +117,7 @@ void run_tests(void)
 		}
 		verify(dst, size);
 #ifdef USE_CMP_ARG
-		err = timsort_arg(dst, size, sizeof(dst[0]), compare_arg, NULL);
+		err = timsort_r(dst, size, sizeof(dst[0]), NULL, compare_arg);
 #else
 		err = timsort(dst, size, sizeof(dst[0]), compare);
 #endif
