@@ -169,7 +169,7 @@ static void NAME(binarySort) (void *a, size_t hi, size_t start,
 		n = startp - leftp;	// The number of bytes to move
 
 		ASSIGN(pivot, startp);
-		memmove(INCPTR(leftp), leftp, n);
+		memmove(INCPTR(leftp), leftp, n); // POP: overlaps
 
 		// a[left] = pivot;
 		ASSIGN(leftp, pivot);
@@ -553,9 +553,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 		return FAILURE;
 
 	// System.arraycopy(a, base1, tmp, 0, len1);
-        // tmp obviously non-overlapping with base1 so memcpy is safe to use
-	memcpy(tmp, base1, LEN(len1));
-
+	memcpy(tmp, base1, LEN(len1)); // POP: can't overlap
 	cursor1 = tmp;		// Indexes into tmp array
 	cursor2 = base2;	// Indexes int a
 	dest = base1;		// Indexes int a
@@ -567,15 +565,11 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 	cursor2 = INCPTR(cursor2);
 
 	if (--len2 == 0) {
-		// cursor1 -> into tmp, dest -> into base1 so no overlap, 
-		// memcpy safe
-		memcpy(dest, cursor1, LEN(len1));
+		memcpy(dest, cursor1, LEN(len1)); // POP: can't overlap
 		return SUCCESS;
 	}
 	if (len1 == 1) {
-		// Potentially overlapping src/dest so use memmove
-		memmove(dest, cursor2, LEN(len2));
-
+		memmove(dest, cursor2, LEN(len2)); // POP: overlaps
 		// a[dest + len2] = tmp[cursor1]; // Last elt of run 1 to end of merge
 		ASSIGN(ELEM(dest, len2), cursor1);
 		return SUCCESS;
@@ -631,7 +625,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 			    CALL(gallopRight) (cursor2, cursor1, len1, 0,
 					       CMPARGS(compare, carg), width);
 			if (count1 != 0) {
-				memmove(dest, cursor1, LEN(count1));
+				memcpy(dest, cursor1, LEN(count1)); // POP: can't overlap
 				dest = ELEM(dest, count1);
 				cursor1 = ELEM(cursor1, count1);
 				len1 -= count1;
@@ -648,7 +642,7 @@ static int NAME(mergeLo) (struct timsort * ts, void *base1, size_t len1,
 			    CALL(gallopLeft) (cursor1, cursor2, len2, 0,
 					      CMPARGS(compare, carg), width);
 			if (count2 != 0) {
-				memmove(dest, cursor2, LEN(count2));
+				memmove(dest, cursor2, LEN(count2)); // POP: might overlap
 				dest = ELEM(dest, count2);
 				cursor2 = ELEM(cursor2, count2);
 				len2 -= count2;
@@ -670,7 +664,7 @@ outer:
 
 	if (len1 == 1) {
 		assert(len2 > 0);
-		memmove(dest, cursor2, LEN(len2));
+		memmove(dest, cursor2, LEN(len2));	//  POP: might overlap
 		ASSIGN(ELEM(dest, len2), cursor1);	//  Last elt of run 1 to end of merge
 
 	} else if (len1 == 0) {
@@ -679,7 +673,7 @@ outer:
 	} else {
 		assert(len2 == 0);
 		assert(len1 > 1);
-		memmove(dest, cursor1, LEN(len1));
+		memcpy(dest, cursor1, LEN(len1)); // POP: can't overlap
 	}
 	return SUCCESS;
 }
@@ -713,9 +707,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	if (!tmp)
 		return FAILURE;
 
-	// memcpy ok since tmp and base2 cannot overlap
-	memcpy(tmp, base2, LEN(len2));
-
+	memcpy(tmp, base2, LEN(len2)); // POP: can't overlap
 	cursor1 = ELEM(base1, len1 - 1);// Indexes into a
 	cursor2 = ELEM(tmp, len2 - 1);	// Indexes into tmp array
 	dest = ELEM(base2, len2 - 1);	// Indexes into a
@@ -726,13 +718,13 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 	dest = DECPTR(dest);
 	cursor1 = DECPTR(cursor1);
 	if (--len1 == 0) {
-		memmove(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
+		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2)); // POP: can't overlap
 		return SUCCESS;
 	}
 	if (len2 == 1) {
 		dest = ELEM(dest, -len1);
 		cursor1 = ELEM(cursor1, -len1);
-		memmove(ELEM(dest, 1), ELEM(cursor1, 1), LEN(len1));
+		memmove(ELEM(dest, 1), ELEM(cursor1, 1), LEN(len1)); // POP: overlaps
 		// a[dest] = tmp[cursor2];
 		ASSIGN(dest, cursor2);
 		return SUCCESS;
@@ -790,7 +782,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 				cursor1 = ELEM(cursor1, -count1);
 				len1 -= count1;
 				memmove(INCPTR(dest), INCPTR(cursor1),
-				       LEN(count1));
+				       LEN(count1)); // POP: might overlap
 				if (len1 == 0)
 					goto outer;
 			}
@@ -808,8 +800,7 @@ static int NAME(mergeHi) (struct timsort * ts, void *base1, size_t len1,
 				dest = ELEM(dest, -count2);
 				cursor2 = ELEM(cursor2, -count2);
 				len2 -= count2;
-				memmove(INCPTR(dest),
-				       INCPTR(cursor2), LEN(count2));
+				memcpy(INCPTR(dest), INCPTR(cursor2), LEN(count2)); // POP: can't overlap
 				if (len2 <= 1)	// len2 == 1 || len2 == 0
 					goto outer;
 			}
@@ -830,7 +821,7 @@ outer:
 		assert(len1 > 0);
 		dest = ELEM(dest, -len1);
 		cursor1 = ELEM(cursor1, -len1);
-		memmove(INCPTR(dest), INCPTR(cursor1), LEN(len1));
+		memmove(INCPTR(dest), INCPTR(cursor1), LEN(len1)); // POP: might overlap
 		// a[dest] = tmp[cursor2];  // Move first elt of run2 to front of merge
 		ASSIGN(dest, cursor2);
 	} else if (len2 == 0) {
@@ -839,7 +830,7 @@ outer:
 	} else {
 		assert(len1 == 0);
 		assert(len2 > 0);
-		memmove(ELEM(dest, -(len2 - 1)), tmp, LEN(len2));
+		memcpy(ELEM(dest, -(len2 - 1)), tmp, LEN(len2)); // POP: can't overlap
 	}
 
 	return SUCCESS;
