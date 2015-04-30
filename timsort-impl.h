@@ -255,29 +255,33 @@ static void NAME(reverseRange) (void *a, size_t hi, size_t width) {
  * This method is called each time a new run is pushed onto the stack,
  * so the invariants are guaranteed to hold for i < stackSize upon
  * entry to the method.
+ *
+ * POP:
+ * Modified according to http://envisage-project.eu/wp-content/uploads/2015/02/sorting.pdf
+ *
+ * and
+ *
+ * https://bugs.openjdk.java.net/browse/JDK-8072909 (suggestion 2)
+ *
  */
 static int NAME(mergeCollapse) (struct timsort * ts, size_t width) {
 	int err = SUCCESS;
 
 	while (ts->stackSize > 1) {
 		size_t n = ts->stackSize - 2;
-		if (n > 0
-		    && ts->run[n - 1].len <=
-		    ts->run[n].len + ts->run[n + 1].len) {
-			if (ts->run[n - 1].len < ts->run[n + 1].len)
-				n--;
-			err = CALL(mergeAt) (ts, n, width);
-			if (err)
-				break;
-		} else if (ts->run[n].len <= ts->run[n + 1].len) {
-			err = CALL(mergeAt) (ts, n, width);
-			if (err)
-				break;
-		} else {
-			break;	// Invariant is established
-		}
-	}
+		struct timsort_run *run = ts->run;
 
+		if ((n > 0 && run[n-1].len <= run[n].len + run[n+1].len)
+				|| (n > 1 && run[n-2].len <= run[n].len + run[n-1].len)) {
+			if (run[n - 1].len < run[n + 1].len)
+				n--;
+		} else if (run[n].len > run[n + 1].len) {
+			break; /* Invariant is established */
+		}
+		err = CALL(mergeAt) (ts, n, width);
+		if (err)
+			break;
+        }
 	return err;
 }
 
@@ -296,7 +300,6 @@ static int NAME(mergeForceCollapse) (struct timsort * ts, size_t width) {
 		if (err)
 			break;
 	}
-
 	return err;
 }
 
