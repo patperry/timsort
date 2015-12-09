@@ -187,6 +187,8 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 			CMPPARAMS(c, carg),
 			size_t width)
 {
+	int err = 0;
+
 	assert(ts);
 	assert(a || !len);
 	assert(c);
@@ -205,6 +207,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
 			  len >> 1 : INITIAL_TMP_STORAGE_LENGTH);
 	ts->tmp = malloc(ts->tmp_length * width);
+	err |= ts->tmp == NULL;
 
 	/*
 	 * Allocate runs-to-be-merged stack (which cannot be expanded).  The
@@ -280,11 +283,12 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	//stackLen = (len < 120 ? 5 : len < 1542 ? 10 : len < 119151 ? 19 : 40);
 
 	ts->run = malloc(ts->stackLen * sizeof(ts->run[0]));
+	err |= ts->run == NULL;
 #else
 	ts->stackLen = MAX_STACK;
 #endif
 
-	if (ts->tmp && ts->run) {
+	if (!err) {
 		return SUCCESS;
 	} else {
 		timsort_deinit(ts);
