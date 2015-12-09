@@ -142,13 +142,15 @@ Reentrant version
 
 A reentrant variation of the `timsort` function - `timsort_r` - has been
 defined which can pass an additional argument to the comparison function
-purely for the calling application's own use. This is similar to the BSD
-(*not* GNU or Windows) `qsort_r` variation of the standard `qsort` function.
+purely for the calling application's own use. This is similar to the GNU
+and C11 variations of the standard `qsort` function (*not* Windows
+`qsort_s` or BSD `qsort_r`).
 
 The prototype for this sorting function is
 
-    int timsort_r(void *base, size_t nel, size_t width, void *thunk,
-                int (*compar) (void *thunk, const void *, const void *));
+    int timsort_r(void *base, size_t nel, size_t width,
+                int (*compar) (const void *, const void *, void *),
+                void *context);
 
 The additional context parameter is passed to the comparison callback
-as the first argument.
+as the last argument.

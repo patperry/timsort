@@ -95,13 +95,13 @@
 
 #ifdef IS_TIMSORT_R
 /*
- * Note order of elements to comparator matches that of BSD qsort_r, not
- * GNU qsort_t
+ * Note order of elements to comparator matches that of C11 qsort_s,
+ * not BSD qsort_r or Windows qsort_s
  */
-typedef int (*comparator) (void *thunk, const void *x, const void *y);
-#define CMPPARAMS(compar, thunk) void *thunk, comparator compar
-#define CMPARGS(compar, thunk) (thunk), (compar)
-#define CMP(compar, thunk, x, y) (compar((thunk), (x), (y)))
+typedef int (*comparator) (const void *x, const void *y, void *thunk);
+#define CMPPARAMS(compar, thunk) comparator compar, void *thunk
+#define CMPARGS(compar, thunk) (compar), (thunk)
+#define CMP(compar, thunk, x, y) (compar((x), (y), (thunk)))
 #define TIMSORT timsort_r
 
 #else
