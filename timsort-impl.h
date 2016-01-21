@@ -163,6 +163,7 @@ static void NAME(binarySort) (void *a, size_t hi, size_t start,
 		// a[left] = pivot;
 		ASSIGN(leftp, pivot);
 	}
+	(void)width;
 }
 
 /**
@@ -221,6 +222,7 @@ static size_t NAME(countRunAndMakeAscending) (void *a, size_t hi,
 	}
 
 	return runHi;
+	(void)width;
 }
 
 /**
@@ -243,6 +245,7 @@ static void NAME(reverseRange) (void *a, size_t hi, size_t width) {
 		front = INCPTR(front);
 		back = DECPTR(back);
 	}
+	(void)width;
 }
 
 /**
@@ -436,6 +439,7 @@ static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
 	}
 	assert(lastOfs == ofs);	// so a[ofs - 1] < key <= a[ofs]
 	return ofs;
+	(void)width;
 }
 
 /**
@@ -508,6 +512,7 @@ static size_t NAME(gallopRight) (void *key, void *base, size_t len,
 	}
 	assert(lastOfs == ofs);	// so a[ofs - 1] <= key < a[ofs]
 	return ofs;
+	(void)width;
 }
 
 /**
