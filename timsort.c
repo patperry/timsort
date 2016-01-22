@@ -192,6 +192,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	assert(ts);
 	assert(a || !len);
 	assert(c);
+	assert(width);
 
 	ts->minGallop = MIN_GALLOP;
 	ts->stackSize = 0;
@@ -206,7 +207,7 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
 			  len >> 1 : INITIAL_TMP_STORAGE_LENGTH);
-	if (ts->tmp_length && width) {
+	if (ts->tmp_length) {
 		ts->tmp = malloc(ts->tmp_length * width);
 		err |= ts->tmp == NULL;
 	} else {
