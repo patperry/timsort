@@ -221,8 +221,8 @@ static size_t NAME(countRunAndMakeAscending) (void *a, size_t hi,
 		}
 	}
 
-	return runHi;
 	(void)width;
+	return runHi;
 }
 
 /**
@@ -438,8 +438,8 @@ static size_t NAME(gallopLeft) (void *key, void *base, size_t len,
 			ofs = m;	// key <= a[m]
 	}
 	assert(lastOfs == ofs);	// so a[ofs - 1] < key <= a[ofs]
-	return ofs;
 	(void)width;
+	return ofs;
 }
 
 /**
@@ -511,8 +511,8 @@ static size_t NAME(gallopRight) (void *key, void *base, size_t len,
 			lastOfs = m + 1;	// a[m] <= key
 	}
 	assert(lastOfs == ofs);	// so a[ofs - 1] <= key < a[ofs]
-	return ofs;
 	(void)width;
+	return ofs;
 }
 
 /**

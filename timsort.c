@@ -206,8 +206,12 @@ static int timsort_init(struct timsort *ts, void *a, size_t len,
 	// Allocate temp storage (which may be increased later if necessary)
 	ts->tmp_length = (len < 2 * INITIAL_TMP_STORAGE_LENGTH ?
 			  len >> 1 : INITIAL_TMP_STORAGE_LENGTH);
-	ts->tmp = malloc(ts->tmp_length * width);
-	err |= ts->tmp == NULL;
+	if (ts->tmp_length && width) {
+		ts->tmp = malloc(ts->tmp_length * width);
+		err |= ts->tmp == NULL;
+	} else {
+		ts->tmp = NULL;
+	}
 
 	/*
 	 * Allocate runs-to-be-merged stack (which cannot be expanded).  The
