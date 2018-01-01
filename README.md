@@ -51,7 +51,7 @@ Use pointers instead of arrays with offsets
 -------------------------------------------
 
 C has pointers, so there is no need to pass around "lo" parameters.  Instead,
-we store the poniter to the base of the array range.
+we store the pointer to the base of the array range.
 
 
 Switch from `int` to `size_t`
